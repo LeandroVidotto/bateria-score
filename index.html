@@ -1,0 +1,1444 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Bateria Score</title>
+<meta name="description" content="Editor de partitura para bateria: figuras, pausas, quiálteras, fórmulas de compasso, notas fantasma, acentos e impressão em PDF.">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Bateria Score">
+<meta name="theme-color" content="#f8f9fb" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#1b1e25" media="(prefers-color-scheme: dark)">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<style>
+*, *::before, *::after { box-sizing: border-box; }
+html { color-scheme: light; padding-top: env(safe-area-inset-top, 0px); padding-bottom: env(safe-area-inset-bottom, 0px); background: var(--panel); -webkit-text-size-adjust: 100%; }
+body { margin: 0; -webkit-user-select: none; user-select: none; }
+input, select { -webkit-user-select: auto; user-select: auto; }
+/* Layout: one-screen app — barra superior, mesa com a partitura (papel branco) rolando, paleta fixa embaixo. */
+:root {
+  --bg: #e9ecf1;          /* mesa */
+  --panel: #f8f9fb;       /* barras e paleta */
+  --fg: #171a21;
+  --muted: #5b6372;
+  --line: #d3d8e1;
+  --chip: #e1e5ec;
+  --accent: #1d4ccc;
+  --accent-fg: #ffffff;
+  --danger: #c0352b;
+  --cym: #c97d08;
+  --drum: #2b62d4;
+  --foot: #2a8f53;
+  --paper: #ffffff;
+  --display: "Bricolage Grotesque", "Avenir Next", system-ui, sans-serif;
+  --ui: "Barlow", "Helvetica Neue", system-ui, sans-serif;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #121419; --panel: #1b1e25; --fg: #e9ebf0; --muted: #9aa2b1; --line: #2d323c; --chip: #272b34;
+    --accent: #7096ff; --accent-fg: #0b1022; --danger: #ff7b6e; --cym: #f0a43a; --drum: #6e9bff; --foot: #4fc283;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #121419; --panel: #1b1e25; --fg: #e9ebf0; --muted: #9aa2b1; --line: #2d323c; --chip: #272b34;
+  --accent: #7096ff; --accent-fg: #0b1022; --danger: #ff7b6e; --cym: #f0a43a; --drum: #6e9bff; --foot: #4fc283;
+  color-scheme: dark;
+}
+[hidden] { display: none !important; }
+html, body { height: 100%; }
+body { background: var(--bg); color: var(--fg); font-family: var(--ui); font-size: 15px; overflow: hidden; }
+button, select, input { font: inherit; color: inherit; }
+button { cursor: pointer; -webkit-tap-highlight-color: transparent; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+#app { height: 100%; display: grid; grid-template-rows: auto 1fr auto; grid-template-columns: minmax(0, 1fr); }
+#app > * { min-width: 0; }
+#palette .gut > * { min-width: 0; }
+.gut { padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+
+/* Barra superior */
+.bar { background: var(--panel); border-bottom: 1px solid var(--line); }
+.bar .gut { display: flex; align-items: center; gap: 4px; padding-block: 6px; }
+.icon { width: 40px; height: 40px; border: 0; border-radius: 10px; background: transparent; display: grid; place-items: center; flex: none; }
+.icon:active { background: var(--chip); }
+.icon:disabled { opacity: .35; }
+.icon svg { width: 22px; height: 22px; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.title { flex: 1; min-width: 0; border: 0; background: transparent; text-align: left; padding: 2px 6px; border-radius: 10px; }
+.title b { display: block; font-family: var(--display); font-weight: 800; font-size: 17px; letter-spacing: -.01em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.title small { display: block; font-size: 12px; color: var(--muted); }
+.pdf { border: 0; border-radius: 10px; background: var(--accent); color: var(--accent-fg); font-weight: 700; padding: 0 12px; height: 36px; display: flex; align-items: center; gap: 6px; flex: none; }
+.pdf svg { width: 18px; height: 18px; stroke: currentColor; fill: none; stroke-width: 2; }
+
+/* Mesa e papel */
+#desk { overflow-y: auto; overflow-x: hidden; -webkit-overflow-scrolling: touch; min-height: 0; }
+#desk .gut { padding-block: 14px 28px; }
+.note { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px; font-size: 13.5px; color: var(--muted); margin-bottom: 12px; display: flex; gap: 10px; align-items: center; }
+.note button { margin-left: auto; flex: none; border: 0; border-radius: 8px; background: var(--chip); padding: 6px 10px; font-weight: 600; }
+#paper { background: var(--paper); color: #111; border-radius: 4px; box-shadow: 0 1px 2px rgba(0,0,0,.12), 0 6px 22px rgba(20,30,60,.10); max-width: 920px; margin: 0 auto; overflow: hidden; }
+#paperHead { text-align: center; padding: 18px 14px 4px; cursor: pointer; }
+#paperHead h1 { margin: 0; font-family: Georgia, "Times New Roman", serif; font-size: 22px; text-wrap: balance; }
+#paperHead p { margin: 4px 0 0; font-family: Georgia, serif; font-style: italic; font-size: 14px; }
+#paperMeta { display: flex; justify-content: space-between; font-size: 13px; padding: 8px 4px 0; font-family: Georgia, serif; }
+#systems canvas { display: block; touch-action: manipulation; }
+#addEnd { display: block; margin: 8px auto 18px; border: 1px dashed #b9c0cc; background: transparent; color: #3a4252; border-radius: 8px; padding: 8px 14px; font-weight: 600; }
+
+/* Paleta */
+#palette { background: var(--panel); border-top: 1px solid var(--line); }
+#palette .gut { display: grid; gap: 7px; padding-block: 8px; }
+.status { font-size: 12.5px; color: var(--muted); text-align: center; font-variant-numeric: tabular-nums; min-height: 16px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.status.err { color: var(--danger); font-weight: 600; }
+.row { display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none; margin: 0 -4px; padding: 0 4px; }
+.row::-webkit-scrollbar { display: none; }
+.sep { width: 1px; background: var(--line); flex: none; margin: 6px 2px; }
+.chip { position: relative; flex: none; min-width: 44px; height: 44px; padding: 0 9px; border: 0; border-radius: 10px; background: var(--chip); display: inline-flex; align-items: center; justify-content: center; gap: 4px; font-weight: 700; font-size: 16px; }
+.chip.on { background: var(--accent); color: var(--accent-fg); }
+.chip svg.nv { width: 22px; height: 30px; }
+.chip select { position: absolute; inset: 0; opacity: 0; width: 100%; height: 100%; }
+.chip .cap { font-size: 13px; font-weight: 600; }
+.pads { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 6px; }
+.pad { height: 40px; border: 0; border-radius: 9px; font-weight: 600; font-size: clamp(11px, 3vw, 13.5px); letter-spacing: -0.01em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding: 0 2px; background: color-mix(in srgb, var(--c) 17%, transparent); box-shadow: inset 0 0 0 2px transparent; }
+.pad:active { background: color-mix(in srgb, var(--c) 35%, transparent); }
+.pad.in { background: color-mix(in srgb, var(--c) 45%, transparent); box-shadow: inset 0 0 0 2px var(--c); }
+.pad.cym { --c: var(--cym); } .pad.drum { --c: var(--drum); } .pad.foot { --c: var(--foot); }
+.pad.rest { --c: var(--muted); grid-column: span 3; }
+.actions { display: flex; align-items: center; gap: 4px; }
+.actions .grow { flex: 1; }
+.txtbtn { border: 0; background: transparent; color: var(--accent); font-weight: 700; height: 40px; padding: 0 8px; border-radius: 10px; display: inline-flex; align-items: center; gap: 4px; }
+.txtbtn svg { width: 20px; height: 20px; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+
+/* Painéis */
+.sheet { position: fixed; inset: 0; z-index: 30; background: var(--bg); display: flex; flex-direction: column; padding-top: env(safe-area-inset-top, 0px); padding-bottom: env(safe-area-inset-bottom, 0px); }
+.sheet > .gut { flex: 1; min-height: 0; overflow-y: auto; -webkit-overflow-scrolling: touch; }
+.sheet-bar { flex: none; background: var(--panel); border-bottom: 1px solid var(--line); }
+.sheet-bar .gut { display: flex; align-items: center; gap: 8px; padding-block: 8px; }
+.sheet-bar h2 { flex: 1; margin: 0; font-family: var(--display); font-weight: 800; font-size: 19px; }
+.sheet-body { padding-block: 16px 40px; display: grid; gap: 16px; max-width: 640px; margin: 0 auto; }
+.btn { border: 0; border-radius: 10px; padding: 10px 14px; font-weight: 700; background: var(--chip); }
+.btn.primary { background: var(--accent); color: var(--accent-fg); }
+.btn.danger { color: var(--danger); }
+.group { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; overflow: hidden; }
+.group h3 { margin: 0; padding: 12px 14px 4px; font-size: 12px; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); font-weight: 700; }
+.field { display: flex; align-items: center; gap: 10px; padding: 10px 14px; border-top: 1px solid var(--line); }
+.group h3 + .field { border-top: 0; }
+.field label { flex: 1; min-width: 0; }
+.field input[type=text], .field input[type=number], .field select { flex: 1.4; min-width: 0; border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; background: var(--bg); }
+.field input[type=checkbox] { width: 22px; height: 22px; accent-color: var(--accent); }
+.field .lnk { flex: 1; text-align: left; border: 0; background: transparent; padding: 0; font-weight: 600; color: var(--accent); }
+.field .lnk.danger { color: var(--danger); }
+.presets { display: flex; flex-wrap: wrap; gap: 6px; padding: 4px 14px 12px; }
+.presets button { border: 0; border-radius: 8px; padding: 7px 10px; background: var(--chip); font-weight: 700; font-variant-numeric: tabular-nums; }
+.presets button.on { background: var(--accent); color: var(--accent-fg); }
+.stepper { display: flex; align-items: center; gap: 6px; }
+.stepper button { width: 36px; height: 36px; border: 0; border-radius: 8px; background: var(--chip); font-size: 18px; font-weight: 700; }
+.stepper output { min-width: 34px; text-align: center; font-weight: 700; font-variant-numeric: tabular-nums; }
+
+.lib-item { display: flex; align-items: center; gap: 8px; padding: 12px 14px; border-top: 1px solid var(--line); }
+.lib-item:first-of-type { border-top: 0; }
+.lib-item .open { flex: 1; min-width: 0; text-align: left; border: 0; background: transparent; padding: 0; }
+.lib-item .open b { display: block; font-weight: 700; font-size: 16px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.lib-item .open span { font-size: 12.5px; color: var(--muted); }
+.lib-item.current .open b { color: var(--accent); }
+.mini { border: 0; background: var(--chip); border-radius: 8px; padding: 6px 9px; font-size: 13px; font-weight: 600; flex: none; }
+.mini.danger { color: var(--danger); }
+.empty { padding: 18px 14px; color: var(--muted); font-size: 14px; }
+.legend { display: grid; grid-template-columns: 1fr auto; gap: 4px 12px; padding: 4px 14px 14px; font-size: 13.5px; }
+.legend span:nth-child(even) { color: var(--muted); text-align: right; }
+
+#pages { display: grid; gap: 14px; }
+#pages canvas { width: 100%; height: auto; background: #fff; border-radius: 3px; box-shadow: 0 2px 14px rgba(0,0,0,.15); }
+.hint { font-size: 13.5px; color: var(--muted); line-height: 1.45; margin: 0; }
+.pdfstate { font-size: 13.5px; font-weight: 600; min-height: 18px; }
+.pdfstate.err { color: var(--danger); }
+@media (prefers-reduced-motion: no-preference) { .chip, .pad, .btn { transition: background-color .12s ease; } }
+</style>
+
+</head>
+<body>
+<div id="app">
+  <header class="bar">
+    <div class="gut">
+      <button class="icon" id="libBtn" aria-label="Minhas partituras"><svg viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h10"/></svg></button>
+      <button class="title" id="titleBtn" aria-label="Informações da partitura"><b id="titleText">Bateria Score</b><small id="saveState">Carregando…</small></button>
+      <button class="icon" id="undoBtn" aria-label="Desfazer"><svg viewBox="0 0 24 24"><path d="M9 14 4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11"/></svg></button>
+      <button class="icon" id="redoBtn" aria-label="Refazer"><svg viewBox="0 0 24 24"><path d="m15 14 5-5-5-5"/><path d="M20 9H9.5a5.5 5.5 0 0 0 0 11H13"/></svg></button>
+      <button class="pdf" id="printBtn" aria-label="Imprimir ou salvar PDF"><svg viewBox="0 0 24 24"><path d="M6 9V3h12v6M6 18H4v-7h16v7h-2M7 14h10v7H7z"/></svg>PDF</button>
+    </div>
+  </header>
+
+  <main id="desk">
+    <div class="gut">
+      <div class="note" id="installNote" hidden><span>Para instalar: toque em <b>Compartilhar</b> e depois em <b>Adicionar à Tela de Início</b>.</span><button id="installClose">Ok</button></div>
+      <div class="note" id="exampleNote" hidden><span>Este é um exercício de exemplo. Edite à vontade: ele é salvo como uma partitura sua.</span><button id="newFromNote">Começar do zero</button></div>
+      <div id="paper">
+        <div id="paperHead" role="button" tabindex="0" aria-label="Editar título e informações">
+          <h1 id="pTitle"></h1>
+          <p id="pSub" hidden></p>
+          <div id="paperMeta"><span id="pTempo"></span><span id="pAuthor"></span></div>
+        </div>
+        <div id="systems"></div>
+        <button id="addEnd">+ Adicionar compasso</button>
+      </div>
+    </div>
+  </main>
+
+  <section id="palette" aria-label="Paleta de notas">
+    <div class="gut">
+      <div class="status" id="status"></div>
+      <div class="row" id="rowValues"></div>
+      <div class="row" id="rowMods">
+        <label class="chip" id="tupChip"><span class="cap" id="tupLabel">Quiáltera</span>
+          <select id="tupSel" aria-label="Quiáltera">
+            <option value="">Nenhuma</option>
+            <option value="3:2">Tercina (3:2)</option>
+            <option value="2:3">Duína (2:3)</option>
+            <option value="4:3">Quartina (4:3)</option>
+            <option value="5:4">Quintina (5:4)</option>
+            <option value="6:4">Sextina (6:4)</option>
+            <option value="7:4">Septina (7:4)</option>
+            <option value="9:8">Novena (9:8)</option>
+          </select></label>
+        <label class="chip" id="accChip"><span id="accLabel">&gt;</span>
+          <select id="accSel" aria-label="Acentuação">
+            <option value="none">Sem acento</option>
+            <option value="accent">Acento  &gt;</option>
+            <option value="marcato">Marcato  ^</option>
+          </select></label>
+        <button class="chip" id="ghostBtn" aria-label="Nota fantasma">( )</button>
+        <label class="chip" id="ornChip"><span class="cap" id="ornLabel">Flam…</span>
+          <select id="ornSel" aria-label="Ornamento">
+            <option value="none">Sem ornamento</option>
+            <option value="flam">Flam</option>
+            <option value="drag">Drag (ruff)</option>
+            <option value="buzz">Buzz roll (z)</option>
+          </select></label>
+        <span class="sep"></span>
+        <button class="chip" id="stR" aria-label="Mão direita">R</button>
+        <button class="chip" id="stL" aria-label="Mão esquerda">L</button>
+        <span class="sep"></span>
+        <button class="chip" id="chordBtn"><span class="cap">+ Acorde</span></button>
+      </div>
+      <div class="pads" id="pads"></div>
+      <div class="actions">
+        <button class="icon" id="leftBtn" aria-label="Nota anterior"><svg viewBox="0 0 24 24"><path d="m15 18-6-6 6-6"/></svg></button>
+        <button class="icon" id="rightBtn" aria-label="Próxima nota"><svg viewBox="0 0 24 24"><path d="m9 18 6-6-6-6"/></svg></button>
+        <button class="icon" id="delBtn" aria-label="Apagar"><svg viewBox="0 0 24 24"><path d="M21 5H9l-6 7 6 7h12z"/><path d="m17 9-6 6M11 9l6 6"/></svg></button>
+        <span class="grow"></span>
+        <button class="txtbtn" id="addMeasureBtn"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M12 9v6M9 12h6"/></svg>Compasso</button>
+        <button class="txtbtn" id="measureBtn"><svg viewBox="0 0 24 24"><path d="M4 7h10M18 7h2M4 17h4M12 17h8"/><circle cx="16" cy="7" r="2"/><circle cx="10" cy="17" r="2"/></svg>Fórmula</button>
+      </div>
+    </div>
+  </section>
+</div>
+
+<!-- Biblioteca -->
+<div class="sheet" id="libSheet" hidden>
+  <div class="sheet-bar"><div class="gut"><h2>Minhas partituras</h2><button class="btn primary" id="newScoreBtn">+ Nova</button><button class="icon" data-close aria-label="Fechar"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></svg></button></div></div>
+  <div class="gut"><div class="sheet-body">
+    <div class="group" id="libList"></div>
+    <div class="group"><h3>Modelo</h3><div class="lib-item"><button class="open" id="openExample"><b>Exercício de demonstração</b><span>Abre uma cópia nova do exemplo com todos os recursos</span></button></div></div>
+    <div class="group"><h3>Cópia de segurança</h3>
+      <div class="field"><button class="lnk" id="backupBtn">Exportar todas as partituras</button></div>
+      <div class="field"><label class="lnk" for="importFile" style="cursor:pointer">Importar cópia de segurança</label><input type="file" id="importFile" accept=".json,application/json" hidden></div>
+    </div>
+    <p class="hint" id="storeHint"></p>
+  </div></div>
+</div>
+
+<!-- Informações da partitura -->
+<div class="sheet" id="infoSheet" hidden>
+  <div class="sheet-bar"><div class="gut"><button class="btn" data-close>Cancelar</button><h2 style="text-align:center">Partitura</h2><button class="btn primary" id="infoSave">Salvar</button></div></div>
+  <div class="gut"><div class="sheet-body">
+    <div class="group"><h3>Informações</h3>
+      <div class="field"><label for="fTitle">Título</label><input type="text" id="fTitle"></div>
+      <div class="field"><label for="fSub">Subtítulo</label><input type="text" id="fSub"></div>
+      <div class="field"><label for="fAuthor">Autor / professor</label><input type="text" id="fAuthor"></div>
+    </div>
+    <div class="group"><h3>Andamento</h3>
+      <div class="field"><label for="fTempoOn">Mostrar semínima = BPM</label><input type="checkbox" id="fTempoOn"></div>
+      <div class="field"><label for="fTempo">BPM</label><input type="number" id="fTempo" min="20" max="300" inputmode="numeric"></div>
+    </div>
+    <div class="group"><h3>Manulação e impressão</h3>
+      <div class="field"><label for="fStick">Letras da manulação</label><select id="fStick"><option value="rl">R / L</option><option value="de">D / E</option></select></div>
+      <div class="field"><label for="fPerLine">Compassos por linha</label><select id="fPerLine"><option value="0">Automático</option><option>1</option><option>2</option><option>3</option><option>4</option><option>5</option><option>6</option><option>8</option></select></div>
+      <div class="field"><label for="fPaper">Papel</label><select id="fPaper"><option value="a4">A4</option><option value="letter">Carta (Letter)</option></select></div>
+    </div>
+    <div class="group"><h3>Legenda dos instrumentos</h3><div class="legend" id="legend"></div></div>
+  </div></div>
+</div>
+
+<!-- Compasso -->
+<div class="sheet" id="measureSheet" hidden>
+  <div class="sheet-bar"><div class="gut"><button class="btn" data-close>Cancelar</button><h2 style="text-align:center" id="mTitle">Compasso</h2><button class="btn primary" id="mSave">Salvar</button></div></div>
+  <div class="gut"><div class="sheet-body">
+    <div class="group"><h3>Fórmula de compasso</h3>
+      <div class="presets" id="presets"></div>
+      <div class="field"><label>Numerador</label><div class="stepper"><button id="bMinus" aria-label="Diminuir">−</button><output id="bOut">4</output><button id="bPlus" aria-label="Aumentar">+</button></div></div>
+      <div class="field"><label for="mUnit">Denominador</label><select id="mUnit"><option>2</option><option>4</option><option>8</option><option>16</option><option>32</option></select></div>
+      <div class="field"><label for="mSym">Símbolo</label><select id="mSym"><option value="numeric">Números</option><option value="common">C (4/4)</option><option value="cut">¢ (2/2)</option></select></div>
+      <div class="field"><label for="mFollow">Aplicar aos compassos seguintes</label><input type="checkbox" id="mFollow" checked></div>
+    </div>
+    <div class="group"><h3>Ritornelo</h3>
+      <div class="field"><label for="mRepS">Início de repetição ‖:</label><input type="checkbox" id="mRepS"></div>
+      <div class="field"><label for="mRepE">Fim de repetição :‖</label><input type="checkbox" id="mRepE"></div>
+    </div>
+    <div class="group"><h3>Este compasso</h3>
+      <div class="field"><button class="lnk" id="mInsert">Inserir compasso depois deste</button></div>
+      <div class="field"><button class="lnk" id="mDup">Duplicar este compasso</button></div>
+      <div class="field"><button class="lnk" id="mClear">Apagar as notas do compasso</button></div>
+      <div class="field"><button class="lnk danger" id="mDelete">Excluir compasso</button></div>
+    </div>
+  </div></div>
+</div>
+
+<!-- Impressão -->
+<div class="sheet" id="printSheet" hidden>
+  <div class="sheet-bar"><div class="gut"><button class="icon" data-close aria-label="Voltar"><svg viewBox="0 0 24 24"><path d="m15 18-6-6 6-6"/></svg></button><h2>Imprimir</h2><button class="btn primary" id="savePdf">Salvar PDF</button></div></div>
+  <div class="gut"><div class="sheet-body">
+    <p class="hint">Toque em <b>Salvar PDF</b>. No iPhone abre a folha de compartilhamento: escolha <b>Imprimir</b> para mandar à impressora (AirPrint), ou salve em Arquivos, envie por WhatsApp ou e-mail.</p>
+    <div class="pdfstate" id="pdfState" role="status"></div>
+    <div id="pages"></div>
+  </div></div>
+</div>
+
+<script>
+(() => {
+'use strict';
+const $ = s => document.querySelector(s);
+
+/* ================= Frações ================= */
+const gcd = (a, b) => b ? gcd(b, a % b) : Math.abs(a);
+function F(n, d) { if (d < 0) { n = -n; d = -d; } const g = gcd(Math.abs(n), d) || 1; return [n / g, d / g]; }
+const ZERO = [0, 1];
+const fadd = (a, b) => F(a[0] * b[1] + b[0] * a[1], a[1] * b[1]);
+const fsub = (a, b) => F(a[0] * b[1] - b[0] * a[1], a[1] * b[1]);
+const fmul = (a, b) => F(a[0] * b[0], a[1] * b[1]);
+const fcmp = (a, b) => a[0] * b[1] - b[0] * a[1];
+const fval = a => a[0] / a[1];
+const fstr = a => a[1] === 1 ? String(a[0]) : a[0] + '/' + a[1];
+
+/* ================= Modelo ================= */
+const VALUES = [1, 2, 4, 8, 16, 32, 64];
+const VNAME = { 1: 'Semibreve', 2: 'Mínima', 4: 'Semínima', 8: 'Colcheia', 16: 'Semicolcheia', 32: 'Fusa', 64: 'Semifusa' };
+const beamCount = v => ({ 8: 1, 16: 2, 32: 3, 64: 4 })[v] || 0;
+const INST = {
+  hiHat:      { name: 'Chimbal fechado',   short: 'Chimbal',    step: 9,  head: 'x',     cat: 'cym' },
+  hiHatOpen:  { name: 'Chimbal aberto',    short: 'Ch. aberto', step: 9,  head: 'x',     cat: 'cym' },
+  ride:       { name: 'Prato de condução', short: 'Condução',   step: 8,  head: 'x',     cat: 'cym' },
+  rideBell:   { name: 'Cúpula da condução',short: 'Cúpula',     step: 8,  head: 'diam',  cat: 'cym' },
+  crash:      { name: 'Prato de ataque',   short: 'Ataque',     step: 10, head: 'x',     cat: 'cym' },
+  china:      { name: 'China',             short: 'China',      step: 11, head: 'cx',    cat: 'cym' },
+  tom1:       { name: 'Tom 1',             short: 'Tom 1',      step: 7,  head: 'n',     cat: 'drum' },
+  tom2:       { name: 'Tom 2',             short: 'Tom 2',      step: 6,  head: 'n',     cat: 'drum' },
+  floorTom:   { name: 'Surdo',             short: 'Surdo',      step: 3,  head: 'n',     cat: 'drum' },
+  snare:      { name: 'Caixa',             short: 'Caixa',      step: 5,  head: 'n',     cat: 'drum' },
+  rimshot:    { name: 'Caixa (rimshot)',   short: 'Rimshot',    step: 5,  head: 'slash', cat: 'drum' },
+  crossStick: { name: 'Cross stick',       short: 'Cross',      step: 5,  head: 'cx',    cat: 'drum' },
+  bass:       { name: 'Bumbo',             short: 'Bumbo',      step: 1,  head: 'n',     cat: 'foot' },
+  hiHatPedal: { name: 'Chimbal com o pé',  short: 'Ch. pé',  step: -1, head: 'x',     cat: 'foot' },
+  cowbell:    { name: 'Cowbell',           short: 'Cowbell',    step: 7,  head: 'tri',   cat: 'cym' }
+};
+const ROWS = [['hiHat', 'hiHatOpen', 'ride', 'rideBell', 'crash', 'china'],
+              ['tom1', 'tom2', 'floorTom', 'snare', 'rimshot', 'crossStick'],
+              ['bass', 'hiHatPedal', 'cowbell']];
+const isFoot = k => INST[k].cat === 'foot';
+
+const uid = () => 's' + Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+const isRest = e => e.notes.length === 0;
+function written(e) { let t = F(1, e.value), add = F(1, e.value); for (let i = 0; i < e.dots; i++) { add = fmul(add, F(1, 2)); t = fadd(t, add); } return t; }
+const dur = e => e.tuplet ? fmul(written(e), F(e.tuplet.normal, e.tuplet.actual)) : written(e);
+const cap = t => F(t.beats, t.unit);
+const filled = m => m.events.reduce((a, e) => fadd(a, dur(e)), ZERO);
+const remaining = m => fsub(cap(m.time), filled(m));
+const tspan = t => F(t.actual, t.unit);
+const sameTime = (a, b) => a.beats === b.beats && a.unit === b.unit && a.symbol === b.symbol;
+const timeLabel = t => t.symbol === 'common' ? 'C' : t.symbol === 'cut' ? '¢' : t.beats + '/' + t.unit;
+const newMeasure = time => ({ id: uid(), time: { ...time }, events: [], repeatStart: false, repeatEnd: false });
+const stickTxt = (style, s) => s === 'R' ? (style === 'de' ? 'D' : 'R') : s === 'L' ? (style === 'de' ? 'E' : 'L') : '';
+
+function beamGroupLengths(t) {
+  if (t.unit <= 4) return Array(Math.max(1, t.beats * 4 / t.unit)).fill(F(1, 4));
+  const compound = t.unit >= 8 && t.beats % 3 === 0 && t.beats > 3;
+  if (compound) return Array(t.beats / 3).fill(F(3, t.unit));
+  const g = t.unit === 8 ? 2 : 4;
+  const r = Array(Math.floor(t.beats / g)).fill(F(g, t.unit));
+  const rem = t.beats % g;
+  if (rem > 0) { if (t.unit === 8 && rem === 1 && r.length) r[r.length - 1] = F(3, t.unit); else r.push(F(rem, t.unit)); }
+  return r;
+}
+
+function beamGroups(m) {
+  const bounds = []; let acc = ZERO;
+  for (const l of beamGroupLengths(m.time)) { acc = fadd(acc, l); bounds.push(acc); }
+  const beatIdx = t => { const i = bounds.findIndex(b => fcmp(t, b) < 0); return i < 0 ? bounds.length : i; };
+  const groups = []; let cur = []; let t = ZERO; let prevBeat = -1;
+  m.events.forEach((e, i) => {
+    const beat = beatIdx(t);
+    const beamable = !isRest(e) && beamCount(e.value) > 0;
+    if (beamable) {
+      if (cur.length) {
+        const le = m.events[cur[cur.length - 1]];
+        const same = (le.tuplet || e.tuplet) ? (le.tuplet && e.tuplet && le.tuplet.gid === e.tuplet.gid) : beat === prevBeat;
+        if (!same) { groups.push(cur); cur = []; }
+      }
+      cur.push(i);
+    } else if (cur.length) { groups.push(cur); cur = []; }
+    prevBeat = beat; t = fadd(t, dur(e));
+  });
+  if (cur.length) groups.push(cur);
+  return groups;
+}
+
+/* ================= Diagramação ================= */
+function leftPad(e, sp) {
+  let p = sp * 0.3;
+  if (isRest(e)) return p;
+  if (e.ornament === 'flam') p += sp * 1.7;
+  if (e.ornament === 'drag') p += sp * 2.7;
+  if (e.notes.some(n => n.ghost)) p += sp * 0.4;
+  return p;
+}
+function natW(e, sp) {
+  let w = leftPad(e, sp) + sp * (1.1 + 5 * Math.sqrt(fval(dur(e))));
+  w += e.dots * sp * 0.6;
+  if (e.notes.some(n => n.ghost)) w += sp * 0.4;
+  const st = e.notes.map(n => INST[n.inst].step).sort((a, b) => a - b);
+  if (st.some((s, i) => i > 0 && s - st[i - 1] === 1)) w += sp * 1.2;
+  return w;
+}
+
+function layoutSystems(score, width, sp, originX) {
+  const ms = score.measures;
+  const infos = ms.map((m, i) => {
+    const showTime = i === 0 || !sameTime(ms[i - 1].time, m.time);
+    const timeW = showTime ? ((m.time.beats >= 10 || m.time.unit >= 10) ? sp * 4.4 : sp * 3.4) : 0;
+    const leading = sp * 1.2 + timeW + (m.repeatStart ? sp * 1.6 : 0);
+    const widths = m.events.map(e => natW(e, sp));
+    const content = m.events.length ? widths.reduce((a, b) => a + b, 0) : sp * 10;
+    const trailing = sp * 0.8 + ((m.repeatEnd || i === ms.length - 1) ? sp * 1.6 : 0);
+    return { leading, widths, content, trailing, showTime, timeW, total: leading + content + trailing };
+  });
+  const clefW = sp * 3.6;
+  const lines = [];
+  if (score.perLine > 0) {
+    for (let i = 0; i < infos.length; i += score.perLine) lines.push([...Array(Math.min(score.perLine, infos.length - i)).keys()].map(k => k + i));
+  } else {
+    let cur = [], w = clefW;
+    infos.forEach((inf, i) => {
+      if (cur.length && w + inf.total > width) { lines.push(cur); cur = []; w = clefW; }
+      cur.push(i); w += inf.total;
+    });
+    if (cur.length) lines.push(cur);
+  }
+  return lines.map((line, li) => {
+    const natural = clefW + line.reduce((a, i) => a + infos[i].total, 0);
+    const contentSum = Math.max(1, line.reduce((a, i) => a + infos[i].content, 0));
+    let extra = width - natural;
+    if (extra > 0 && li === lines.length - 1 && natural < width * 0.6) extra = 0;
+    const factor = Math.max(0.5, (contentSum + extra) / contentSum);
+    let x = originX + clefW;
+    let hasAcc = false, hasTup = false, hasStk = false;
+    const measures = line.map(i => {
+      const inf = infos[i], m = ms[i], x0 = x;
+      const timeX = x0 + (m.repeatStart ? sp * 1.6 : 0) + sp * 0.5 + inf.timeW / 2;
+      const contentX = x0 + inf.leading;
+      let ex = contentX;
+      const events = m.events.map((e, k) => {
+        const w = inf.widths[k] * factor;
+        const le = { m: i, i: k, slotX: ex, slotW: w, headX: ex + leftPad(e, sp) };
+        ex += w;
+        if (!isRest(e) && e.accent !== 'none') hasAcc = true;
+        if (e.tuplet) hasTup = true;
+        if (!isRest(e) && e.sticking !== 'none') hasStk = true;
+        return le;
+      });
+      const contentEnd = contentX + inf.content * factor;
+      const x1 = contentEnd + inf.trailing;
+      x = x1;
+      return { index: i, x0, x1, showTime: inf.showTime, timeX, contentX, contentEnd, events };
+    });
+    const topPad = hasTup ? sp * 8.5 : hasAcc ? sp * 7 : sp * 5.5;
+    const bottomPad = hasStk ? sp * 7 : sp * 3.5;
+    return { y: 0, sp, x0: originX, x1: x, measures, topPad, bottomPad, height: topPad + 4 * sp + bottomPad };
+  });
+}
+
+function hitTest(px, s) {
+  if (!s.measures.length) return null;
+  let lm = s.measures.find(m => px >= m.x0 && px <= m.x1);
+  if (!lm) lm = px < s.measures[0].x0 ? s.measures[0] : s.measures[s.measures.length - 1];
+  const le = lm.events.find(e => px >= e.slotX && px < e.slotX + e.slotW);
+  if (le) return { type: 'event', ref: { m: le.m, i: le.i } };
+  return { type: 'insert', ref: { m: lm.index, i: lm.events.filter(e => e.slotX + e.slotW / 2 < px).length } };
+}
+
+/* ================= Desenho (Canvas) ================= */
+const INK = '#111111', PAPER = '#ffffff';
+function drawSystem(ctx, score, s, o) {
+  o = o || {};
+  const sp = s.sp, top = s.y, hw = sp * 1.3, stemW = Math.max(0.6, sp * 0.13), lineW = Math.max(0.5, sp * 0.1);
+  const Y = st => top + 4 * sp - st * sp / 2;
+  const TAU = Math.PI * 2;
+  ctx.save();
+  ctx.lineCap = 'butt'; ctx.lineJoin = 'miter';
+  if (o.editor) s.measures.forEach(editorBg);
+  ink();
+  ctx.lineWidth = lineW; ctx.beginPath();
+  for (let i = 0; i < 5; i++) { ctx.moveTo(s.x0, top + i * sp); ctx.lineTo(s.x1, top + i * sp); }
+  ctx.stroke();
+  const cx = s.x0 + sp;
+  ctx.fillRect(cx, top + sp, sp * 0.5, 2 * sp);
+  ctx.fillRect(cx + sp, top + sp, sp * 0.5, 2 * sp);
+  if (!o.isFirst && s.measures.length) text(String(s.measures[0].index + 1), `italic ${sp * 1.3}px Georgia, serif`, s.x0 + sp * 0.8, top - sp * 1.8);
+  s.measures.forEach(drawMeasure);
+  ctx.restore();
+
+  function ink() { ctx.fillStyle = INK; ctx.strokeStyle = INK; }
+  function seg(x1, y1, x2, y2, w) { ctx.lineWidth = w; ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); ctx.stroke(); }
+  function dot(x, y, r) { ctx.beginPath(); ctx.arc(x, y, r, 0, TAU); ctx.fill(); }
+  function text(t, font, x, y) { ctx.font = font; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(t, x, y); }
+  function capText(t, font, x, y) {
+    ctx.font = font; ctx.textAlign = 'center'; ctx.textBaseline = 'alphabetic';
+    const m = ctx.measureText(t);
+    const a = m.actualBoundingBoxAscent || sp * 1.9, d = m.actualBoundingBoxDescent || 0;
+    ctx.fillText(t, x, y + (a - d) / 2);
+  }
+
+  function editorBg(lm) {
+    const cur = o.selection ? o.selection.m : (o.cursor ? o.cursor.m : -1);
+    if (cur === lm.index) { ctx.fillStyle = 'rgba(29,76,204,0.06)'; ctx.fillRect(lm.x0, top - 5 * sp, lm.x1 - lm.x0, 11 * sp); }
+    if (o.selection && o.selection.m === lm.index && lm.events[o.selection.i]) {
+      const le = lm.events[o.selection.i];
+      ctx.fillStyle = 'rgba(29,76,204,0.22)';
+      ctx.beginPath();
+      if (ctx.roundRect) ctx.roundRect(le.slotX, top - 5 * sp, le.slotW, 11 * sp, sp * 0.6); else ctx.rect(le.slotX, top - 5 * sp, le.slotW, 11 * sp);
+      ctx.fill();
+    } else if (!o.selection && o.cursor && o.cursor.m === lm.index) {
+      let x;
+      if (o.cursor.i < lm.events.length) x = lm.events[o.cursor.i].slotX;
+      else if (lm.events.length) { const l = lm.events[lm.events.length - 1]; x = l.slotX + l.slotW; }
+      else x = lm.contentX + sp * 0.4;
+      ctx.fillStyle = '#1d4ccc'; ctx.fillRect(x - 1, top - 2 * sp, 2.5, 8 * sp);
+    }
+    const m = score.measures[lm.index];
+    if (m.events.length && fcmp(remaining(m), ZERO) > 0) {
+      ctx.fillStyle = 'rgba(214,124,10,0.85)';
+      ctx.fillRect(lm.x0 + sp * 0.3, top + 5.2 * sp, lm.x1 - lm.x0 - sp * 0.6, Math.max(1.5, sp * 0.2));
+    }
+  }
+
+  function repDots(x) { dot(x, top + 1.5 * sp, sp * 0.25); dot(x, top + 2.5 * sp, sp * 0.25); }
+
+  function drawMeasure(lm) {
+    const m = score.measures[lm.index];
+    const isLast = lm.index === score.measures.length - 1;
+    ink();
+    if (m.repeatStart) {
+      const x = lm.x0 + sp * 0.2;
+      ctx.fillRect(x, top, sp * 0.5, 4 * sp);
+      ctx.fillRect(x + sp * 0.8, top, lineW * 1.4, 4 * sp);
+      repDots(x + sp * 1.35);
+    }
+    if (lm.showTime) drawTime(m.time, lm.timeX);
+    const geos = lm.events.map((le, i) => isRest(m.events[i]) ? null : geom(m.events[i], le.headX));
+    const bgs = [];
+    for (const g of beamGroups(m)) {
+      if (g.length < 2) continue;
+      const maxB = Math.max(...g.map(i => beamCount(m.events[i].value)));
+      const minTop = Math.min(...g.map(i => geos[i].topY));
+      const tip = minTop - 3.5 * sp - Math.max(0, maxB - 2) * sp * 0.8;
+      g.forEach(i => { geos[i].tip = tip; geos[i].beamed = true; });
+      bgs.push(g);
+    }
+    lm.events.forEach((le, i) => {
+      const e = m.events[i];
+      if (geos[i]) drawNote(e, geos[i]); else drawRest(e.value, e.dots, le.headX);
+    });
+    bgs.forEach(g => drawBeams(g, m.events, geos));
+    drawTuplets(m, lm, geos, bgs);
+    ink();
+    const x1 = lm.x1;
+    if (m.repeatEnd || isLast) {
+      ctx.fillRect(x1 - sp * 0.5, top, sp * 0.5, 4 * sp);
+      ctx.fillRect(x1 - sp * 1.0 - lineW * 1.4, top, lineW * 1.4, 4 * sp);
+      if (m.repeatEnd) repDots(x1 - sp * 1.55);
+    } else {
+      ctx.fillRect(x1 - lineW * 0.7, top, lineW * 1.4, 4 * sp);
+    }
+  }
+
+  function geom(e, headX) {
+    const sorted = [...e.notes].sort((a, b) => INST[a.inst].step - INST[b.inst].step);
+    let prev = null, prevRight = false, anyRight = false;
+    const notes = sorted.map(n => {
+      const st = INST[n.inst].step;
+      const right = prev !== null && st - prev === 1 && !prevRight;
+      if (right) anyRight = true;
+      prev = st; prevRight = right;
+      return { n, st, x: right ? headX + hw - stemW : headX, y: Y(st) };
+    });
+    const ys = notes.map(p => p.y);
+    const topY = Math.min(...ys), bottomY = Math.max(...ys);
+    return { headX, notes, topY, bottomY, stemX: headX + hw - stemW / 2,
+             tip: topY - 3.5 * sp - Math.max(0, beamCount(e.value) - 2) * sp * 0.8, beamed: false, anyRight };
+  }
+
+  function drawNote(e, g) {
+    ink();
+    // linhas suplementares
+    ctx.lineWidth = lineW * 1.3; ctx.beginPath();
+    for (const p of g.notes) {
+      for (let st = 10; st <= p.st; st += 2) { ctx.moveTo(p.x - sp * 0.45, Y(st)); ctx.lineTo(p.x + hw + sp * 0.45, Y(st)); }
+      for (let st = -2; st >= p.st; st -= 2) { ctx.moveTo(p.x - sp * 0.45, Y(st)); ctx.lineTo(p.x + hw + sp * 0.45, Y(st)); }
+    }
+    ctx.stroke();
+    for (const p of g.notes) {
+      head(INST[p.n.inst].head, e.value, p.x, p.y);
+      if (p.n.ghost) parens(p.x, p.y);
+    }
+    if (e.dots) {
+      const dx = g.headX + hw + (g.anyRight ? hw : 0) + sp * 0.55;
+      for (const p of g.notes) {
+        const dy = p.st % 2 === 0 ? p.y - sp * 0.5 : p.y;
+        for (let k = 0; k < e.dots; k++) dot(dx + k * sp * 0.6, dy, sp * 0.2);
+      }
+    }
+    if (e.value !== 1) {
+      seg(g.stemX, g.bottomY - sp * 0.15, g.stemX, g.tip, stemW);
+      if (!g.beamed && beamCount(e.value)) flags(beamCount(e.value), g.stemX, g.tip);
+    }
+    const open = g.notes.find(p => p.n.inst === 'hiHatOpen');
+    if (open) {
+      const cy = (e.value !== 1 ? g.tip : open.y - sp * 1.5) - sp * 0.9;
+      ctx.lineWidth = sp * 0.13; ctx.beginPath(); ctx.arc(open.x + hw / 2, cy, sp * 0.35, 0, TAU); ctx.stroke();
+    }
+    if (e.ornament === 'flam' || e.ornament === 'drag') {
+      const main = g.notes.find(p => !isFoot(p.n.inst)) || g.notes[0];
+      grace(e.ornament === 'flam' ? 1 : 2, main);
+    } else if (e.ornament === 'buzz') {
+      const ym = e.value !== 1 ? (g.tip + g.bottomY) / 2 - sp * 0.3 : g.topY - sp * 1.6;
+      const sx = e.value !== 1 ? g.stemX : g.headX + hw / 2;
+      ctx.lineWidth = sp * 0.16; ctx.beginPath();
+      ctx.moveTo(sx - sp * 0.5, ym - sp * 0.4); ctx.lineTo(sx + sp * 0.5, ym - sp * 0.4);
+      ctx.lineTo(sx - sp * 0.5, ym + sp * 0.4); ctx.lineTo(sx + sp * 0.5, ym + sp * 0.4); ctx.stroke();
+    }
+    if (e.accent !== 'none') accent(e.accent, g.headX + hw / 2, top - 6 * sp);
+    if (e.sticking !== 'none') text(stickTxt(score.sticking, e.sticking), `600 ${sp * 1.5}px Barlow, Helvetica, sans-serif`, g.headX + hw / 2, top + 6.4 * sp);
+  }
+
+  function head(type, value, x, y) {
+    const filledH = value >= 4, w = value === 1 ? hw * 1.2 : hw, h = sp * 0.95, cx = x + w / 2;
+    ink();
+    if (type === 'n' || type === 'slash') {
+      if (filledH) { ctx.beginPath(); ctx.ellipse(cx, y, w / 2, h / 2, value === 1 ? 0 : -0.35, 0, TAU); ctx.fill(); }
+      else {
+        const p = new Path2D(), a = new Path2D(), b = new Path2D();
+        a.ellipse(cx, y, w / 2, h / 2, value === 1 ? 0 : -0.35, 0, TAU);
+        b.ellipse(cx, y, w * 0.33, h * 0.24, value === 1 ? 0.6 : -0.55, 0, TAU);
+        p.addPath(a); p.addPath(b); ctx.fill(p, 'evenodd');
+      }
+      if (type === 'slash') seg(x - sp * 0.35, y + sp * 0.75, x + w + sp * 0.35, y - sp * 0.75, sp * 0.14);
+    } else if (type === 'x' || type === 'cx') {
+      const i = sp * 0.12;
+      ctx.lineWidth = sp * 0.16; ctx.beginPath();
+      ctx.moveTo(x + i, y - h / 2); ctx.lineTo(x + w - i, y + h / 2);
+      ctx.moveTo(x + i, y + h / 2); ctx.lineTo(x + w - i, y - h / 2); ctx.stroke();
+      if (type === 'cx' || !filledH) { ctx.lineWidth = sp * 0.12; ctx.beginPath(); ctx.arc(cx, y, sp * 0.8, 0, TAU); ctx.stroke(); }
+    } else {
+      ctx.beginPath();
+      if (type === 'diam') { ctx.moveTo(cx, y - h * 0.62); ctx.lineTo(x + w, y); ctx.lineTo(cx, y + h * 0.62); ctx.lineTo(x, y); }
+      else { ctx.moveTo(cx, y - h * 0.6); ctx.lineTo(x + w, y + h * 0.5); ctx.lineTo(x, y + h * 0.5); }
+      ctx.closePath();
+      if (filledH) ctx.fill(); else { ctx.lineWidth = sp * 0.14; ctx.stroke(); }
+    }
+  }
+
+  function parens(x, y) {
+    const h = sp * 0.75, lx = x - sp * 0.3, rx = x + hw + sp * 0.3;
+    ctx.lineWidth = sp * 0.13; ctx.beginPath();
+    ctx.moveTo(lx, y - h); ctx.quadraticCurveTo(lx - sp * 0.55, y, lx, y + h);
+    ctx.moveTo(rx, y - h); ctx.quadraticCurveTo(rx + sp * 0.55, y, rx, y + h);
+    ctx.stroke();
+  }
+
+  function flags(n, sx, tip) {
+    for (let k = 0; k < n; k++) {
+      const y0 = tip + k * sp * 0.85;
+      ctx.beginPath(); ctx.moveTo(sx, y0);
+      ctx.bezierCurveTo(sx + sp * 0.15, y0 + sp * 1.2, sx + sp * 1.4, y0 + sp * 1.5, sx + sp * 1.0, y0 + sp * 2.7);
+      ctx.bezierCurveTo(sx + sp * 0.9, y0 + sp * 1.9, sx + sp * 0.3, y0 + sp * 1.4, sx, y0 + sp * 0.9);
+      ctx.closePath(); ctx.fill();
+    }
+  }
+
+  function drawBeams(g, events, geos) {
+    const tip = geos[g[0]].tip, xs = g.map(i => geos[i].stemX);
+    const thick = sp * 0.5, gap = sp * 0.75;
+    const maxL = Math.max(...g.map(i => beamCount(events[i].value)));
+    ink();
+    for (let level = 1; level <= maxL; level++) {
+      const yy = tip + (level - 1) * gap;
+      let run = null;
+      for (let k = 0; k < g.length; k++) {
+        const has = beamCount(events[g[k]].value) >= level;
+        if (has && run === null) run = k;
+        const end = !has || k === g.length - 1;
+        if (run !== null && end) {
+          const a = run, b = has ? k : k - 1;
+          if (a === b) {
+            const len = sp * 1.1, x = xs[a];
+            if (a === g.length - 1) ctx.fillRect(x - len, yy, len + stemW / 2, thick);
+            else ctx.fillRect(x - stemW / 2, yy, len + stemW / 2, thick);
+          } else ctx.fillRect(xs[a] - stemW / 2, yy, xs[b] - xs[a] + stemW, thick);
+          run = null;
+        }
+      }
+    }
+  }
+
+  function drawTuplets(m, lm, geos, bgs) {
+    const order = [], members = {}, info = {};
+    m.events.forEach((e, i) => {
+      if (!e.tuplet) return;
+      const id = e.tuplet.gid;
+      if (!members[id]) { order.push(id); members[id] = []; info[id] = e.tuplet; }
+      members[id].push(i);
+    });
+    const font = `italic bold ${sp * 1.7}px "Times New Roman", Georgia, serif`;
+    for (const id of order) {
+      const idx = members[id], t = info[id];
+      const first = idx[0], last = idx[idx.length - 1];
+      const x1 = lm.events[first].headX;
+      const x2 = geos[last] ? geos[last].stemX : lm.events[last].headX + hw;
+      const tips = idx.filter(i => geos[i]).map(i => geos[i].tip);
+      const hasAcc = idx.some(i => !isRest(m.events[i]) && m.events[i].accent !== 'none');
+      let yy = (tips.length ? Math.min(...tips) : top - 3.5 * sp) - sp * 1.2;
+      if (hasAcc) yy = Math.min(yy, top - 7.3 * sp);
+      const label = String(t.actual);
+      ctx.font = font; const tw = ctx.measureText(label).width;
+      const cxm = (x1 + x2) / 2;
+      const fully = bgs.some(g => g.length === idx.length && g.every((v, k) => v === idx[k]));
+      ink();
+      if (!fully && x2 - x1 > tw + sp) {
+        const half = tw / 2 + sp * 0.4;
+        ctx.lineWidth = sp * 0.12; ctx.beginPath();
+        ctx.moveTo(x1, yy + sp * 0.7); ctx.lineTo(x1, yy); ctx.lineTo(cxm - half, yy);
+        ctx.moveTo(cxm + half, yy); ctx.lineTo(x2, yy); ctx.lineTo(x2, yy + sp * 0.7); ctx.stroke();
+      }
+      text(label, font, cxm, yy);
+    }
+  }
+
+  function grace(count, main) {
+    const gw = hw * 0.62, gh = sp * 0.62, yy = main.y, tipY = yy - sp * 2.6;
+    const stems = []; let firstX = 0;
+    ink();
+    for (let k = 0; k < count; k++) {
+      const gx = main.x - (count === 1 ? sp * 1.6 : sp * (2.6 - k * 1.0));
+      if (k === 0) firstX = gx;
+      ctx.beginPath(); ctx.ellipse(gx + gw / 2, yy, gw / 2, gh / 2, -0.35, 0, TAU); ctx.fill();
+      const sx = gx + gw - sp * 0.05; stems.push(sx);
+      seg(sx, yy, sx, tipY, stemW * 0.8);
+    }
+    if (count === 1) {
+      const sx = stems[0];
+      ctx.beginPath(); ctx.moveTo(sx, tipY);
+      ctx.bezierCurveTo(sx + sp * 0.1, tipY + sp * 0.8, sx + sp * 0.9, tipY + sp * 0.9, sx + sp * 0.7, tipY + sp * 1.7);
+      ctx.bezierCurveTo(sx + sp * 0.6, tipY + sp * 1.2, sx + sp * 0.2, tipY + sp * 0.9, sx, tipY + sp * 0.6);
+      ctx.closePath(); ctx.fill();
+      seg(sx - sp * 0.7, tipY + sp * 1.9, sx + sp * 0.7, tipY + sp * 0.5, sp * 0.1);
+    } else {
+      const w = stems[stems.length - 1] - stems[0] + stemW;
+      ctx.fillRect(stems[0] - stemW / 2, tipY, w, sp * 0.3);
+      ctx.fillRect(stems[0] - stemW / 2, tipY + sp * 0.5, w, sp * 0.3);
+    }
+    const sx0 = firstX + gw / 2, sy0 = yy + sp * 0.55, ex = main.x + hw * 0.3, ey = yy + sp * 0.7;
+    ctx.lineWidth = sp * 0.1; ctx.beginPath(); ctx.moveTo(sx0, sy0);
+    ctx.quadraticCurveTo((sx0 + ex) / 2, yy + sp * 1.5, ex, ey); ctx.stroke();
+  }
+
+  function accent(a, cxa, yy) {
+    ctx.beginPath();
+    if (a === 'accent') {
+      ctx.lineWidth = sp * 0.15;
+      ctx.moveTo(cxa - sp * 0.65, yy - sp * 0.38); ctx.lineTo(cxa + sp * 0.65, yy); ctx.lineTo(cxa - sp * 0.65, yy + sp * 0.38);
+    } else {
+      ctx.lineWidth = sp * 0.22;
+      ctx.moveTo(cxa - sp * 0.5, yy + sp * 0.45); ctx.lineTo(cxa, yy - sp * 0.5); ctx.lineTo(cxa + sp * 0.5, yy + sp * 0.45);
+    }
+    ctx.stroke();
+  }
+
+  function drawRest(value, dots, x) {
+    ink();
+    if (value === 1) ctx.fillRect(x, top + sp, sp * 1.3, sp * 0.55);
+    else if (value === 2) ctx.fillRect(x, top + 2 * sp - sp * 0.55, sp * 1.3, sp * 0.55);
+    else if (value === 4) {
+      ctx.save(); ctx.lineWidth = sp * 0.32; ctx.lineJoin = 'round'; ctx.lineCap = 'round'; ctx.beginPath();
+      ctx.moveTo(x + sp * 0.35, top + sp * 0.5); ctx.lineTo(x + sp * 1.1, top + sp * 1.45);
+      ctx.lineTo(x + sp * 0.45, top + sp * 2.25); ctx.lineTo(x + sp * 1.15, top + sp * 3.0);
+      ctx.quadraticCurveTo(x + sp * 0.2, top + sp * 2.8, x + sp * 0.55, top + sp * 3.6);
+      ctx.stroke(); ctx.restore();
+    } else {
+      const n = beamCount(value);
+      const yTop = top + sp * 1.2 - Math.max(0, n - 2) * sp;
+      const len = sp * (1.4 + n);
+      const xr = x + sp * 1.2 + (n - 1) * sp * 0.25;
+      seg(xr, yTop, xr - len * 0.3, yTop + len, sp * 0.14);
+      for (let k = 0; k < n; k++) {
+        const yy = yTop + k * sp, sx = xr - (yy - yTop) * 0.3, bx = sx - sp * 0.85;
+        dot(bx, yy + sp * 0.3, sp * 0.3);
+        ctx.lineWidth = sp * 0.13; ctx.beginPath(); ctx.moveTo(bx, yy + sp * 0.3);
+        ctx.quadraticCurveTo(bx + sp * 0.5, yy + sp * 0.6, sx, yy); ctx.stroke();
+      }
+    }
+    for (let k = 0; k < dots; k++) dot(x + sp * 1.8 + k * sp * 0.6, top + 1.5 * sp, sp * 0.2);
+  }
+
+  function drawTime(t, cxT) {
+    ink();
+    const font = `bold ${sp * 2.9}px "Times New Roman", Georgia, serif`;
+    if (t.symbol === 'common' || t.symbol === 'cut') {
+      capText('C', `bold ${sp * 3.8}px "Times New Roman", Georgia, serif`, cxT, top + 2 * sp);
+      if (t.symbol === 'cut') ctx.fillRect(cxT - sp * 0.08, top - sp * 0.6, sp * 0.16, 5.2 * sp);
+    } else {
+      capText(String(t.beats), font, cxT, top + sp);
+      capText(String(t.unit), font, cxT, top + 3 * sp);
+    }
+  }
+}
+
+/* ================= Páginas para impressão ================= */
+function paperSize(p) { return p === 'letter' ? { w: 612, h: 792 } : { w: 595.28, h: 841.89 }; }
+function renderPages(score, scale) {
+  const P = paperSize(score.paper), margin = 40, sp = 5.2, footer = 24;
+  const systems = layoutSystems(score, P.w - 2 * margin, sp, margin);
+  const headerH = 32 + (score.subtitle ? 18 : 0) + 26;
+  const pages = [[]]; let y = margin + headerH;
+  for (const s of systems) {
+    if (y + s.height > P.h - margin - footer && pages[pages.length - 1].length) { pages.push([]); y = margin; }
+    s.y = y + s.topPad; pages[pages.length - 1].push(s); y += s.height + sp * 1.5;
+  }
+  return pages.map((list, pi) => {
+    const c = document.createElement('canvas');
+    c.width = Math.round(P.w * scale); c.height = Math.round(P.h * scale);
+    const ctx = c.getContext('2d');
+    ctx.scale(scale, scale);
+    ctx.fillStyle = PAPER; ctx.fillRect(0, 0, P.w, P.h);
+    ctx.fillStyle = INK; ctx.textAlign = 'center'; ctx.textBaseline = 'top';
+    if (pi === 0) {
+      let hy = margin;
+      ctx.font = 'bold 22px Georgia, "Times New Roman", serif'; ctx.fillText(score.title, P.w / 2, hy); hy += 32;
+      if (score.subtitle) { ctx.font = 'italic 13px Georgia, serif'; ctx.fillText(score.subtitle, P.w / 2, hy); hy += 18; }
+      const ly = hy + 12;
+      if (score.tempo > 0) {
+        ctx.beginPath(); ctx.ellipse(margin + 3.5, ly, 3.6, 2.6, -0.35, 0, Math.PI * 2); ctx.fill();
+        ctx.lineWidth = 0.9; ctx.beginPath(); ctx.moveTo(margin + 6.7, ly); ctx.lineTo(margin + 6.7, ly - 15); ctx.stroke();
+        ctx.font = '600 12px Barlow, Helvetica, sans-serif'; ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+        ctx.fillText(' = ' + score.tempo, margin + 9, ly - 3);
+      }
+      if (score.author) { ctx.font = '11px Georgia, serif'; ctx.textAlign = 'right'; ctx.textBaseline = 'middle'; ctx.fillText(score.author, P.w - margin, ly); }
+    }
+    list.forEach((s, si) => drawSystem(ctx, score, s, { isFirst: pi === 0 && si === 0 }));
+    if (pages.length > 1) {
+      ctx.fillStyle = '#555'; ctx.font = '8px Helvetica, sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'top';
+      ctx.fillText(`${score.title} — página ${pi + 1} de ${pages.length}`, P.w / 2, P.h - margin + 6);
+    }
+    return c;
+  });
+}
+
+/* ================= Exemplo ================= */
+function sampleScore() {
+  const four = { beats: 4, unit: 4, symbol: 'numeric' }, six8 = { beats: 6, unit: 8, symbol: 'numeric' };
+  const ev = (value, insts, o = {}) => ({ id: uid(), value, dots: o.dots || 0,
+    notes: insts.map(k => ({ inst: k, ghost: !!(o.ghost && o.ghost.includes(k)) })),
+    tuplet: o.tuplet || null, accent: o.accent || 'none', ornament: o.ornament || 'none', sticking: o.sticking || 'none' });
+  const grp = (a, n, u) => ({ gid: uid(), actual: a, normal: n, unit: u });
+  const M = (time, events, extra = {}) => ({ id: uid(), time: { ...time }, events, repeatStart: !!extra.rs, repeatEnd: !!extra.re });
+  const m1 = []; for (let i = 0; i < 8; i++) { const ins = ['hiHat']; if (i === 0 || i === 4) ins.push('bass'); if (i === 2 || i === 6) ins.push('snare'); m1.push(ev(8, ins, { accent: (i === 2 || i === 6) ? 'accent' : 'none' })); }
+  const m2 = []; for (let i = 0; i < 16; i++) { const ins = []; ins.push('hiHat'); if ([0, 6, 8].includes(i)) ins.push('bass'); if ([4, 12, 7, 9, 15].includes(i)) ins.push('snare'); m2.push(ev(16, ins, { ghost: [7, 9, 15].includes(i) ? ['snare'] : [], accent: (i === 4 || i === 12) ? 'accent' : 'none' })); }
+  const m3 = []; let hand = 'R'; for (let b = 0; b < 4; b++) { const t = grp(3, 2, 8); for (let k = 0; k < 3; k++) { m3.push(ev(8, ['snare'], { tuplet: t, accent: k === 0 ? 'accent' : 'none', sticking: hand })); hand = hand === 'R' ? 'L' : 'R'; } }
+  const m4 = [ev(4, ['crash', 'bass'], { accent: 'accent' }), ev(4, ['snare'], { ornament: 'flam' }), ev(8, ['tom1'], { sticking: 'R' }), ev(8, ['tom2'], { sticking: 'L' }), ev(8, ['floorTom'], { sticking: 'R' }), ev(8, ['floorTom', 'bass'], { sticking: 'L' })];
+  const m5 = [ev(8, ['hiHat', 'bass']), ev(8, ['hiHat']), ev(8, ['hiHat']), ev(8, ['hiHat', 'snare'], { accent: 'accent' }), ev(8, ['hiHat']), ev(8, ['hiHat', 'snare'], { ghost: ['snare'] })];
+  const m6 = [ev(4, ['ride', 'bass'], { dots: 1 }), ev(8, ['snare'], { ornament: 'drag' }), ev(8, []), ev(8, ['hiHatOpen'], { accent: 'marcato' })];
+  const m7 = []; const q = grp(5, 4, 16); for (let k = 0; k < 5; k++) m7.push(ev(16, ['snare'], { tuplet: q, accent: k === 0 ? 'accent' : 'none' }));
+  m7.push(ev(4, [])); const s6 = grp(6, 4, 16); ['tom1', 'tom1', 'tom2', 'tom2', 'floorTom', 'floorTom'].forEach(k => m7.push(ev(16, [k], { tuplet: s6 }))); m7.push(ev(4, ['crossStick']));
+  const m8 = [ev(2, ['crash', 'bass'], { accent: 'accent' }), ev(4, ['snare'], { ornament: 'buzz' }), ev(4, [])];
+  return { id: uid(), title: 'Exercício de demonstração', subtitle: 'Grooves, notas fantasma e quiálteras', author: 'Bateria Score',
+    tempo: 90, perLine: 0, paper: 'a4', sticking: 'rl', modified: Date.now(),
+    measures: [M(four, m1, { rs: 1 }), M(four, m2, { re: 1 }), M(four, m3), M(four, m4), M(six8, m5), M(six8, m6), M(four, m7), M(four, m8)] };
+}
+function blankScore(n) {
+  return { id: uid(), title: 'Exercício ' + n, subtitle: '', author: '', tempo: 0, perLine: 0, paper: 'a4', sticking: 'rl',
+    modified: Date.now(), measures: [0, 1, 2, 3].map(() => newMeasure({ beats: 4, unit: 4, symbol: 'numeric' })) };
+}
+
+/* ================= Armazenamento ================= */
+const LS_KEY = 'bateria-score-v1';
+let library = [];
+const Store = {
+  mode: 'memory', timers: {},
+  async init() {
+    try { if (navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(() => {}); } catch (e) {}
+    try {
+      const raw = localStorage.getItem(LS_KEY);
+      localStorage.setItem(LS_KEY + '-test', '1'); localStorage.removeItem(LS_KEY + '-test');
+      this.mode = 'local';
+      return raw ? JSON.parse(raw) : [];
+    } catch (e) { this.mode = 'memory'; return []; }
+  },
+  schedule(score) {
+    clearTimeout(this.timers[score.id]);
+    setSave('Salvando…');
+    this.timers[score.id] = setTimeout(() => this.writeLocal(), 400);
+  },
+  writeLocal() {
+    if (this.mode !== 'local') { setSave('Não será salvo ao fechar', true); return; }
+    try { localStorage.setItem(LS_KEY, JSON.stringify(library)); setSave('Salvo neste iPhone'); }
+    catch (e) { setSave('Memória cheia: exporte uma cópia e exclua partituras antigas', true); }
+  },
+  async remove() { this.writeLocal(); }
+};
+function setSave(t, err) { const el = $('#saveState'); el.textContent = t; el.style.color = err ? 'var(--danger)' : ''; }
+
+/* ================= Estado do editor ================= */
+const S = {
+  score: sampleScore(), isExample: true, selection: null, cursor: { m: 0, i: 8 },
+  value: 8, dots: 0, tuplet: '', ghost: false, accent: 'none', ornament: 'none', sticking: 'none', chord: false,
+  message: '', undo: [], redo: [], lastInserted: null, ready: false
+};
+const clone = o => JSON.parse(JSON.stringify(o));
+const cmpRef = (a, b) => (a.m - b.m) || (a.i - b.i);
+function evAt(r) { const m = r && S.score.measures[r.m]; return (m && m.events[r.i]) || null; }
+function msg(t) { S.message = t; renderStatus(); }
+
+function commit(s) {
+  S.undo.push(S.score); if (S.undo.length > 200) S.undo.shift();
+  S.redo = [];
+  s.modified = Date.now();
+  S.score = s;
+  persist();
+}
+function persist() {
+  if (S.isExample) { S.isExample = false; library.push(S.score); }
+  const i = library.findIndex(x => x.id === S.score.id);
+  if (i >= 0) library[i] = S.score; else library.push(S.score);
+  Store.schedule(S.score);
+}
+function edit(fn) { const s = clone(S.score); fn(s); commit(s); }
+function clampCursor() {
+  const m = Math.max(0, Math.min(S.cursor.m, S.score.measures.length - 1));
+  S.cursor = { m, i: Math.max(0, Math.min(S.cursor.i, S.score.measures[m].events.length)) };
+}
+function undo() { if (!S.undo.length) return; S.redo.push(S.score); S.score = S.undo.pop(); afterJump(); }
+function redo() { if (!S.redo.length) return; S.undo.push(S.score); S.score = S.redo.pop(); afterJump(); }
+function afterJump() { S.selection = null; S.lastInserted = null; S.message = ''; clampCursor(); persist(); render(); }
+function curMeasure() { return Math.min(S.selection ? S.selection.m : S.cursor.m, S.score.measures.length - 1); }
+
+function select(r) {
+  const e = evAt(r); if (!e) return;
+  S.selection = r; S.cursor = { m: r.m, i: r.i + 1 }; S.message = '';
+  S.value = e.value; S.dots = e.dots;
+  if (!isRest(e)) { S.accent = e.accent; S.ornament = e.ornament; S.sticking = e.sticking; S.ghost = e.notes.some(n => n.ghost); }
+}
+function setCursor(r) { S.selection = null; S.cursor = r; S.message = ''; clampCursor(); }
+const allRefs = () => S.score.measures.flatMap((m, mi) => m.events.map((_, i) => ({ m: mi, i })));
+function moveLeft() {
+  const refs = allRefs();
+  if (S.selection) { const k = refs.findIndex(r => !cmpRef(r, S.selection)); if (k > 0) select(refs[k - 1]); }
+  else { const r = refs.filter(r => cmpRef(r, S.cursor) < 0).pop(); if (r) select(r); }
+  render();
+}
+function moveRight() {
+  const refs = allRefs();
+  if (S.selection) {
+    const k = refs.findIndex(r => !cmpRef(r, S.selection));
+    if (k >= 0 && k + 1 < refs.length) select(refs[k + 1]); else setCursor({ m: S.selection.m, i: S.selection.i + 1 });
+  } else { const r = refs.find(r => cmpRef(r, S.cursor) >= 0); if (r) select(r); }
+  render();
+}
+
+function toggleNote(ev, inst, ghost) {
+  const i = ev.notes.findIndex(n => n.inst === inst);
+  if (i >= 0) ev.notes.splice(i, 1);
+  else { ev.notes = ev.notes.filter(n => INST[n.inst].step !== INST[inst].step); ev.notes.push({ inst, ghost }); }
+  if (!ev.notes.length) { ev.accent = 'none'; ev.ornament = 'none'; ev.sticking = 'none'; }
+}
+function pad(inst) {
+  S.message = '';
+  if (S.chord) {
+    const fallback = S.cursor.i > 0 ? { m: S.cursor.m, i: S.cursor.i - 1 } : S.lastInserted;
+    const target = S.selection || fallback;
+    if (!target || !evAt(target)) { msg('Selecione uma nota para formar o acorde'); return; }
+    const g = S.ghost;
+    edit(s => toggleNote(s.measures[target.m].events[target.i], inst, g));
+    render(); return;
+  }
+  insert([{ inst, ghost: S.ghost }]);
+}
+function beatsTxt(f, unit) { return fstr(F(f[0] * unit, f[1])); }
+function tupletFor(kind, measure, index, w) {
+  const [a, n] = kind.split(':').map(Number);
+  if (index > 0) {
+    const prev = measure.events[index - 1].tuplet;
+    if (prev && prev.actual === a && prev.normal === n) {
+      const used = measure.events.filter(e => e.tuplet && e.tuplet.gid === prev.gid).reduce((acc, e) => fadd(acc, written(e)), ZERO);
+      if (fcmp(used, tspan(prev)) < 0) return fcmp(fadd(used, w), tspan(prev)) <= 0 ? { ...prev } : null;
+    }
+  }
+  const t = { gid: uid(), actual: a, normal: n, unit: S.value };
+  if (fcmp(fadd(filled(measure), F(n, S.value)), cap(measure.time)) > 0 || fcmp(w, tspan(t)) > 0) return null;
+  return t;
+}
+function insert(notes) {
+  const s = clone(S.score);
+  let m = Math.max(0, Math.min(S.cursor.m, s.measures.length - 1));
+  let i = Math.min(S.cursor.i, s.measures[m].events.length);
+  if (i === s.measures[m].events.length && fcmp(remaining(s.measures[m]), ZERO) <= 0) {
+    m++; i = 0;
+    if (m >= s.measures.length) s.measures.push(newMeasure(s.measures[m - 1].time));
+  }
+  const ev = { id: uid(), value: S.value, dots: S.dots, notes, tuplet: null, accent: 'none', ornament: 'none', sticking: 'none' };
+  if (notes.length) { ev.accent = S.accent; ev.ornament = S.ornament; ev.sticking = S.sticking; }
+  if (S.tuplet) {
+    const t = tupletFor(S.tuplet, s.measures[m], i, written(ev));
+    if (!t) { msg('A quiáltera não cabe neste ponto do compasso'); return; }
+    ev.tuplet = t;
+  }
+  const ms = s.measures[m];
+  if (fcmp(fadd(filled(ms), dur(ev)), cap(ms.time)) > 0) {
+    msg(`Não cabe: restam ${beatsTxt(remaining(ms), ms.time.unit)} tempo(s) neste compasso`); return;
+  }
+  ms.events.splice(i, 0, ev);
+  const ins = { m, i }; i++;
+  if (i === ms.events.length && fcmp(remaining(ms), ZERO) <= 0 && m + 1 < s.measures.length) { m++; i = 0; }
+  S.message = '';
+  commit(s);
+  S.lastInserted = ins; S.selection = null; S.cursor = { m, i };
+  render();
+}
+function restAction() {
+  const r = S.selection, e = evAt(r);
+  if (e && !isRest(e)) {
+    edit(s => { const x = s.measures[r.m].events[r.i]; x.notes = []; x.accent = 'none'; x.ornament = 'none'; x.sticking = 'none'; });
+    render();
+  } else insert([]);
+}
+function modifySelected(fn) {
+  const r = S.selection, old = evAt(r);
+  if (!old) { render(); return; }
+  const ev = clone(old); fn(ev);
+  if (JSON.stringify(ev) === JSON.stringify(old)) { render(); return; }
+  const m = S.score.measures[r.m];
+  if (fcmp(fadd(fsub(filled(m), dur(old)), dur(ev)), cap(m.time)) > 0) { msg('Não cabe no compasso'); renderPalette(); return; }
+  edit(s => { s.measures[r.m].events[r.i] = ev; });
+  render();
+}
+function deleteBackward() {
+  S.message = '';
+  const r = S.selection;
+  if (r && evAt(r)) { edit(s => s.measures[r.m].events.splice(r.i, 1)); S.selection = null; S.cursor = r; render(); return; }
+  if (S.cursor.i > 0) {
+    const t = { m: S.cursor.m, i: S.cursor.i - 1 };
+    if (evAt(t)) { edit(s => s.measures[t.m].events.splice(t.i, 1)); S.cursor = t; }
+  } else if (S.cursor.m > 0) {
+    const cm = S.cursor.m;
+    if (!S.score.measures[cm].events.length && cm === S.score.measures.length - 1) edit(s => s.measures.splice(cm, 1));
+    S.cursor = { m: cm - 1, i: S.score.measures[cm - 1].events.length };
+  }
+  render();
+}
+function insertMeasure(after) {
+  edit(s => s.measures.splice(after + 1, 0, newMeasure(s.measures[after].time)));
+  S.selection = null; S.cursor = { m: after + 1, i: 0 }; render();
+}
+function duplicateMeasure(i) {
+  edit(s => {
+    const c = clone(s.measures[i]); c.id = uid(); const map = {};
+    c.events.forEach(e => { e.id = uid(); if (e.tuplet) { map[e.tuplet.gid] = map[e.tuplet.gid] || uid(); e.tuplet.gid = map[e.tuplet.gid]; } });
+    s.measures.splice(i + 1, 0, c);
+  });
+  S.selection = null; S.cursor = { m: i + 1, i: S.score.measures[i + 1].events.length }; render();
+}
+function clearMeasure(i) { edit(s => { s.measures[i].events = []; }); S.selection = null; S.cursor = { m: i, i: 0 }; render(); }
+function deleteMeasure(i) {
+  if (S.score.measures.length <= 1) { clearMeasure(i); return; }
+  edit(s => s.measures.splice(i, 1));
+  S.selection = null;
+  const m = Math.min(i, S.score.measures.length - 1);
+  S.cursor = { m, i: S.score.measures[m].events.length }; render();
+}
+function applyMeasure(i, time, follow, rs, re) {
+  let trimmed = false;
+  edit(s => {
+    const old = { ...s.measures[i].time };
+    for (let j = i; j < s.measures.length; j++) {
+      if (j > i && (!follow || !sameTime(s.measures[j].time, old))) break;
+      s.measures[j].time = { ...time };
+      while (fcmp(filled(s.measures[j]), cap(time)) > 0) { s.measures[j].events.pop(); trimmed = true; }
+    }
+    s.measures[i].repeatStart = rs; s.measures[i].repeatEnd = re;
+  });
+  S.selection = null; clampCursor();
+  S.message = trimmed ? 'Notas que excediam a nova fórmula de compasso foram removidas' : '';
+  render();
+}
+
+/* ================= Interface ================= */
+function noteSvg(v) {
+  const filledH = v >= 4, bc = beamCount(v);
+  let s = `<svg class="nv" viewBox="0 0 22 30" aria-hidden="true"><ellipse cx="9" cy="23.5" rx="5" ry="3.6" transform="rotate(-22 9 23.5)" ${filledH ? 'fill="currentColor"' : 'fill="none" stroke="currentColor" stroke-width="1.8"'}/>`;
+  if (v !== 1) {
+    s += `<path d="M13.4 22.5V3" stroke="currentColor" stroke-width="1.6"/>`;
+    for (let k = 0; k < bc; k++) s += `<path d="M13.4 ${3 + k * 4}q6 2 5.5 8" fill="none" stroke="currentColor" stroke-width="1.8"/>`;
+  }
+  return s + '</svg>';
+}
+
+function buildPalette() {
+  const rv = $('#rowValues');
+  rv.innerHTML = VALUES.map(v => `<button class="chip" data-v="${v}" aria-label="${VNAME[v]}">${noteSvg(v)}</button>`).join('') +
+    '<span class="sep"></span><button class="chip" data-dots="1" aria-label="Ponto de aumento">•</button><button class="chip" data-dots="2" aria-label="Duplo ponto">••</button>';
+  rv.addEventListener('click', e => {
+    const b = e.target.closest('button'); if (!b) return;
+    if (b.dataset.v) { const v = +b.dataset.v; S.value = v; S.message = ''; modifySelected(ev => { ev.value = v; }); }
+    else if (b.dataset.dots) { const d = +b.dataset.dots; S.dots = S.dots === d ? 0 : d; const nd = S.dots; modifySelected(ev => { ev.dots = nd; }); }
+  });
+  const pads = $('#pads');
+  pads.innerHTML = ROWS.flat().map(k => `<button class="pad ${INST[k].cat}" data-inst="${k}" aria-label="${INST[k].name}">${INST[k].short}</button>`).join('') +
+    '<button class="pad rest" id="restBtn">Pausa</button>';
+  pads.addEventListener('click', e => {
+    const b = e.target.closest('button'); if (!b) return;
+    if (b.id === 'restBtn') restAction(); else pad(b.dataset.inst);
+  });
+  $('#tupSel').addEventListener('change', e => { S.tuplet = e.target.value; renderPalette(); });
+  $('#accSel').addEventListener('change', e => { const a = e.target.value; S.accent = a; modifySelected(ev => { if (!isRest(ev)) ev.accent = a; }); });
+  $('#ornSel').addEventListener('change', e => { const o = e.target.value; S.ornament = o; modifySelected(ev => { if (!isRest(ev)) ev.ornament = o; }); });
+  $('#ghostBtn').onclick = () => { S.ghost = !S.ghost; const g = S.ghost; modifySelected(ev => ev.notes.forEach(n => { n.ghost = g; })); };
+  const stick = s => { S.sticking = S.sticking === s ? 'none' : s; const v = S.sticking; modifySelected(ev => { if (!isRest(ev)) ev.sticking = v; }); };
+  $('#stR').onclick = () => stick('R');
+  $('#stL').onclick = () => stick('L');
+  $('#chordBtn').onclick = () => { S.chord = !S.chord; renderPalette(); };
+  $('#leftBtn').onclick = moveLeft;
+  $('#rightBtn').onclick = moveRight;
+  $('#delBtn').onclick = deleteBackward;
+  $('#addMeasureBtn').onclick = () => insertMeasure(curMeasure());
+  $('#addEnd').onclick = () => insertMeasure(S.score.measures.length - 1);
+  $('#measureBtn').onclick = openMeasure;
+  $('#undoBtn').onclick = undo;
+  $('#redoBtn').onclick = redo;
+}
+
+function renderStatus() {
+  const st = $('#status');
+  if (S.message) { st.textContent = S.message; st.classList.add('err'); return; }
+  st.classList.remove('err');
+  const i = curMeasure(), m = S.score.measures[i];
+  st.textContent = `Compasso ${i + 1} de ${S.score.measures.length} · ${timeLabel(m.time)} · ${beatsTxt(filled(m), m.time.unit)} de ${m.time.beats} tempos`;
+}
+
+function renderPalette() {
+  renderStatus();
+  document.querySelectorAll('#rowValues [data-v]').forEach(b => b.classList.toggle('on', +b.dataset.v === S.value));
+  document.querySelectorAll('#rowValues [data-dots]').forEach(b => b.classList.toggle('on', +b.dataset.dots === S.dots));
+  $('#tupSel').value = S.tuplet; $('#tupLabel').textContent = S.tuplet || 'Quiáltera'; $('#tupChip').classList.toggle('on', !!S.tuplet);
+  $('#accSel').value = S.accent; $('#accLabel').textContent = S.accent === 'marcato' ? '^' : '>'; $('#accChip').classList.toggle('on', S.accent !== 'none');
+  $('#ornSel').value = S.ornament; $('#ornLabel').textContent = { none: 'Flam…', flam: 'Flam', drag: 'Drag', buzz: 'Buzz' }[S.ornament]; $('#ornChip').classList.toggle('on', S.ornament !== 'none');
+  $('#ghostBtn').classList.toggle('on', S.ghost);
+  $('#stR').textContent = stickTxt(S.score.sticking, 'R'); $('#stL').textContent = stickTxt(S.score.sticking, 'L');
+  $('#stR').classList.toggle('on', S.sticking === 'R'); $('#stL').classList.toggle('on', S.sticking === 'L');
+  $('#chordBtn').classList.toggle('on', S.chord);
+  const sel = evAt(S.selection);
+  document.querySelectorAll('.pad[data-inst]').forEach(b => b.classList.toggle('in', !!sel && sel.notes.some(n => n.inst === b.dataset.inst)));
+  $('#undoBtn').disabled = !S.undo.length; $('#redoBtn').disabled = !S.redo.length;
+}
+
+let systemsCache = [];
+function renderScore() {
+  const sc = S.score;
+  $('#titleText').textContent = sc.title;
+  $('#pTitle').textContent = sc.title;
+  $('#pSub').textContent = sc.subtitle; $('#pSub').hidden = !sc.subtitle;
+  $('#pTempo').textContent = sc.tempo > 0 ? '♩ = ' + sc.tempo : '';
+  $('#pAuthor').textContent = sc.author;
+  $('#exampleNote').hidden = !S.isExample;
+  const host = $('#systems');
+  const W = host.clientWidth || 360;
+  const sp = W > 700 ? 8.5 : 7, margin = 10;
+  const dpr = Math.min(3, window.devicePixelRatio || 1);
+  const systems = layoutSystems(sc, W - 2 * margin, sp, margin);
+  systemsCache = systems;
+  while (host.children.length > systems.length) host.lastChild.remove();
+  systems.forEach((s, i) => {
+    s.y = s.topPad;
+    let c = host.children[i];
+    if (!c) { c = document.createElement('canvas'); c.dataset.idx = i; host.appendChild(c); }
+    const h = Math.ceil(s.height);
+    c.style.width = W + 'px'; c.style.height = h + 'px';
+    if (c.width !== Math.round(W * dpr) || c.height !== Math.round(h * dpr)) { c.width = Math.round(W * dpr); c.height = Math.round(h * dpr); }
+    const ctx = c.getContext('2d');
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctx.fillStyle = PAPER; ctx.fillRect(0, 0, W, h);
+    drawSystem(ctx, sc, s, { editor: true, selection: S.selection, cursor: S.cursor, isFirst: i === 0 });
+  });
+}
+function render() { renderScore(); renderPalette(); }
+
+$('#systems').addEventListener('click', e => {
+  const c = e.target.closest('canvas'); if (!c) return;
+  const s = systemsCache[+c.dataset.idx]; if (!s) return;
+  const r = c.getBoundingClientRect();
+  const hit = hitTest(e.clientX - r.left, s); if (!hit) return;
+  if (hit.type === 'event') { if (S.selection && !cmpRef(S.selection, hit.ref)) S.selection = null; else select(hit.ref); }
+  else setCursor(hit.ref);
+  render();
+});
+new ResizeObserver(() => renderScore()).observe($('#systems'));
+
+/* ---------- Painéis ---------- */
+function openSheet(id) { $(id).hidden = false; const g = $(id).querySelector(':scope > .gut'); if (g) g.scrollTop = 0; }
+document.querySelectorAll('[data-close]').forEach(b => b.addEventListener('click', () => { b.closest('.sheet').hidden = true; }));
+
+// Biblioteca
+let pendingDelete = null;
+function renderLibrary() {
+  const list = $('#libList');
+  const items = [...library].sort((a, b) => b.modified - a.modified);
+  if (!S.ready) list.innerHTML = '<div class="empty">Carregando suas partituras…</div>';
+  else if (!items.length) list.innerHTML = '<div class="empty">Você ainda não salvou nenhuma partitura. Toque em <b>+ Nova</b> ou edite o exemplo.</div>';
+  else list.innerHTML = items.map(s => {
+    const d = new Date(s.modified).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' });
+    const del = pendingDelete === s.id
+      ? `<button class="mini danger" data-act="confirm" data-id="${s.id}">Excluir?</button><button class="mini" data-act="cancel">Não</button>`
+      : `<button class="mini" data-act="dup" data-id="${s.id}">Duplicar</button><button class="mini danger" data-act="del" data-id="${s.id}" aria-label="Excluir">Excluir</button>`;
+    return `<div class="lib-item${s.id === S.score.id ? ' current' : ''}"><button class="open" data-act="open" data-id="${s.id}"><b></b><span>${s.measures.length} compassos · ${d}</span></button>${del}</div>`;
+  }).join('');
+  list.querySelectorAll('.lib-item').forEach((el, k) => { el.querySelector('b').textContent = items[k].title; });
+  const hints = { local: 'Suas partituras ficam salvas neste aparelho. Exporte uma cópia de segurança de vez em quando: se o app for apagado do iPhone, elas vão junto.', memory: 'O navegador está bloqueando o armazenamento (modo privado?). As partituras não serão guardadas ao fechar.' };
+  $('#storeHint').textContent = S.ready ? hints[Store.mode] : '';
+}
+$('#libList').addEventListener('click', e => {
+  const b = e.target.closest('button'); if (!b) return;
+  const id = b.dataset.id, act = b.dataset.act;
+  if (act === 'open') { loadScore(library.find(s => s.id === id)); $('#libSheet').hidden = true; return; }
+  if (act === 'dup') {
+    const src = library.find(s => s.id === id); const c = clone(src);
+    c.id = uid(); c.title = src.title + ' (cópia)'; c.modified = Date.now(); library.push(c); Store.schedule(c);
+  }
+  if (act === 'del') pendingDelete = id;
+  if (act === 'cancel') pendingDelete = null;
+  if (act === 'confirm') {
+    library = library.filter(s => s.id !== id); pendingDelete = null; Store.remove(id);
+    if (S.score.id === id) loadScore(library[0] || sampleScore(), !library[0]);
+  }
+  renderLibrary();
+});
+function loadScore(score, example = false) {
+  S.score = score; S.isExample = example; S.selection = null; S.undo = []; S.redo = []; S.lastInserted = null; S.message = '';
+  S.cursor = { m: 0, i: score.measures[0].events.length };
+  render();
+  $('#desk').scrollTop = 0;
+}
+function newScore() {
+  const s = blankScore(library.length + 1); library.push(s); Store.schedule(s);
+  loadScore(s); $('#libSheet').hidden = true;
+}
+$('#libBtn').onclick = () => { pendingDelete = null; renderLibrary(); openSheet('#libSheet'); };
+$('#newScoreBtn').onclick = newScore;
+$('#newFromNote').onclick = newScore;
+$('#openExample').onclick = () => { loadScore(sampleScore(), true); $('#libSheet').hidden = true; };
+
+// Informações
+function openInfo() {
+  const s = S.score;
+  $('#fTitle').value = s.title; $('#fSub').value = s.subtitle; $('#fAuthor').value = s.author;
+  $('#fTempoOn').checked = s.tempo > 0; $('#fTempo').value = s.tempo || 100; $('#fTempo').disabled = !(s.tempo > 0);
+  $('#fStick').value = s.sticking; $('#fPerLine').value = String(s.perLine); $('#fPaper').value = s.paper;
+  openSheet('#infoSheet');
+}
+$('#fTempoOn').onchange = e => { $('#fTempo').disabled = !e.target.checked; };
+$('#titleBtn').onclick = openInfo;
+$('#paperHead').onclick = openInfo;
+$('#paperHead').onkeydown = e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openInfo(); } };
+$('#infoSave').onclick = () => {
+  const title = $('#fTitle').value.trim() || 'Sem título';
+  const tempo = $('#fTempoOn').checked ? Math.max(20, Math.min(300, parseInt($('#fTempo').value, 10) || 100)) : 0;
+  edit(s => {
+    s.title = title; s.subtitle = $('#fSub').value.trim(); s.author = $('#fAuthor').value.trim(); s.tempo = tempo;
+    s.sticking = $('#fStick').value; s.perLine = parseInt($('#fPerLine').value, 10) || 0; s.paper = $('#fPaper').value;
+  });
+  $('#infoSheet').hidden = true; render();
+};
+$('#legend').innerHTML = Object.keys(INST).map(k => {
+  const h = { n: '●', x: 'x', cx: '⊗', diam: '◆', tri: '▲', slash: '● cortada' }[INST[k].head];
+  const pos = { 11: 'acima, 2ª suplementar', 10: '1ª linha suplementar', 9: 'acima da 5ª linha', 8: '5ª linha', 7: '4º espaço', 6: '4ª linha', 5: '3º espaço', 3: '2º espaço', 1: '1º espaço', '-1': 'abaixo da pauta' }[INST[k].step];
+  return `<span>${INST[k].name}</span><span>${h}${k === 'hiHatOpen' ? ' com “o”' : ''} · ${pos}</span>`;
+}).join('');
+
+// Compasso
+const PRESETS = [[2, 4], [3, 4], [4, 4], [5, 4], [6, 4], [7, 4], [2, 2], [3, 2], [3, 8], [5, 8], [6, 8], [7, 8], [9, 8], [12, 8], [5, 16], [7, 16]];
+const M = { idx: 0, beats: 4 };
+function syncMeasureUI() {
+  $('#bOut').textContent = M.beats;
+  const unit = +$('#mUnit').value;
+  document.querySelectorAll('#presets button').forEach(b => b.classList.toggle('on', +b.dataset.b === M.beats && +b.dataset.u === unit));
+}
+$('#presets').innerHTML = PRESETS.map(([b, u]) => `<button data-b="${b}" data-u="${u}">${b}/${u}</button>`).join('');
+$('#presets').addEventListener('click', e => {
+  const b = e.target.closest('button'); if (!b) return;
+  M.beats = +b.dataset.b; $('#mUnit').value = b.dataset.u; $('#mSym').value = 'numeric'; syncMeasureUI();
+});
+$('#bMinus').onclick = () => { M.beats = Math.max(1, M.beats - 1); syncMeasureUI(); };
+$('#bPlus').onclick = () => { M.beats = Math.min(32, M.beats + 1); syncMeasureUI(); };
+$('#mUnit').onchange = syncMeasureUI;
+$('#mSym').onchange = e => {
+  if (e.target.value === 'common') { M.beats = 4; $('#mUnit').value = '4'; }
+  if (e.target.value === 'cut') { M.beats = 2; $('#mUnit').value = '2'; }
+  syncMeasureUI();
+};
+function openMeasure() {
+  M.idx = curMeasure();
+  const m = S.score.measures[M.idx];
+  M.beats = m.time.beats; $('#mUnit').value = String(m.time.unit); $('#mSym').value = m.time.symbol;
+  $('#mRepS').checked = m.repeatStart; $('#mRepE').checked = m.repeatEnd; $('#mFollow').checked = true;
+  $('#mTitle').textContent = 'Compasso ' + (M.idx + 1);
+  syncMeasureUI(); openSheet('#measureSheet');
+}
+$('#mSave').onclick = () => {
+  const unit = +$('#mUnit').value; let sym = $('#mSym').value;
+  if (!((sym === 'common' && M.beats === 4 && unit === 4) || (sym === 'cut' && M.beats === 2 && unit === 2))) sym = 'numeric';
+  applyMeasure(M.idx, { beats: M.beats, unit, symbol: sym }, $('#mFollow').checked, $('#mRepS').checked, $('#mRepE').checked);
+  $('#measureSheet').hidden = true;
+};
+const closeM = fn => () => { fn(M.idx); $('#measureSheet').hidden = true; };
+$('#mInsert').onclick = closeM(insertMeasure);
+$('#mDup').onclick = closeM(duplicateMeasure);
+$('#mClear').onclick = closeM(clearMeasure);
+$('#mDelete').onclick = closeM(deleteMeasure);
+
+// Impressão / PDF
+function openPrint() {
+  $('#pdfState').textContent = ''; $('#pdfState').className = 'pdfstate';
+  const pages = $('#pages'); pages.innerHTML = '';
+  renderPages(S.score, 2).forEach(c => pages.appendChild(c));
+  openSheet('#printSheet');
+}
+$('#printBtn').onclick = openPrint;
+/* PDF mínimo com uma imagem JPEG por página (sem bibliotecas, funciona offline) */
+function dataUrlBytes(u) { const b = atob(u.split(',')[1]); const a = new Uint8Array(b.length); for (let i = 0; i < b.length; i++) a[i] = b.charCodeAt(i); return a; }
+function buildPdf(canvases, P, title) {
+  const enc = new TextEncoder(), parts = [], offsets = [];
+  let len = 0;
+  const push = x => { const b = typeof x === 'string' ? enc.encode(x) : x; parts.push(b); len += b.length; };
+  const n = canvases.length, pagesId = 2, firstPage = 3;
+  const objCount = 2 + n * 3 + 1;
+  push('%PDF-1.4\n%\xE2\xE3\xCF\xD3\n');
+  const obj = (id, body) => { offsets[id] = len; push(id + ' 0 obj\n'); body(); push('\nendobj\n'); };
+  obj(1, () => push('<< /Type /Catalog /Pages 2 0 R >>'));
+  const kids = []; for (let i = 0; i < n; i++) kids.push((firstPage + i * 3) + ' 0 R');
+  obj(pagesId, () => push(`<< /Type /Pages /Kids [${kids.join(' ')}] /Count ${n} >>`));
+  canvases.forEach((c, i) => {
+    const pid = firstPage + i * 3, cid = pid + 1, iid = pid + 2;
+    const jpg = dataUrlBytes(c.toDataURL('image/jpeg', 0.92));
+    const w = P.w.toFixed(2), h = P.h.toFixed(2);
+    obj(pid, () => push(`<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ${w} ${h}] /Resources << /XObject << /Im${i} ${iid} 0 R >> >> /Contents ${cid} 0 R >>`));
+    const content = `q ${w} 0 0 ${h} 0 0 cm /Im${i} Do Q`;
+    obj(cid, () => push(`<< /Length ${content.length} >>\nstream\n${content}\nendstream`));
+    obj(iid, () => { push(`<< /Type /XObject /Subtype /Image /Width ${c.width} /Height ${c.height} /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode /Length ${jpg.length} >>\nstream\n`); push(jpg); push('\nendstream'); });
+  });
+  const infoId = objCount;
+  const esc = s => String(s).replace(/[^\x20-\x7E]/g, ch => ({ 'á':'a','à':'a','â':'a','ã':'a','é':'e','ê':'e','í':'i','ó':'o','ô':'o','õ':'o','ú':'u','ç':'c','Á':'A','É':'E','Í':'I','Ó':'O','Ú':'U','Ç':'C','Ã':'A','Õ':'O' }[ch] || '')).replace(/[()\\]/g, '\\$&');
+  obj(infoId, () => push(`<< /Title (${esc(title)}) /Creator (Bateria Score) >>`));
+  const xref = len;
+  let x = `xref\n0 ${objCount + 1}\n0000000000 65535 f \n`;
+  for (let i = 1; i <= objCount; i++) x += String(offsets[i]).padStart(10, '0') + ' 00000 n \n';
+  push(x + `trailer\n<< /Size ${objCount + 1} /Root 1 0 R /Info ${infoId} 0 R >>\nstartxref\n${xref}\n%%EOF\n`);
+  return new Blob(parts, { type: 'application/pdf' });
+}
+async function shareFile(file) {
+  if (navigator.canShare && navigator.canShare({ files: [file] })) {
+    try { await navigator.share({ files: [file], title: file.name }); return 'shared'; }
+    catch (e) { if (e && e.name === 'AbortError') return 'cancelled'; }
+  }
+  const url = URL.createObjectURL(file);
+  const a = document.createElement('a'); a.href = url; a.download = file.name; a.target = '_blank'; a.rel = 'noopener';
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 60000);
+  return 'opened';
+}
+const safeName = t => (t.replace(/[\/\\?%*|"<>:]/g, '-').trim() || 'Partitura');
+$('#savePdf').onclick = async () => {
+  const st = $('#pdfState');
+  const setSt = (t, err) => { st.textContent = t; st.className = 'pdfstate' + (err ? ' err' : ''); };
+  setSt('Gerando PDF…');
+  await new Promise(r => setTimeout(r, 30));
+  try {
+    const sc = S.score, P = paperSize(sc.paper);
+    const blob = buildPdf(renderPages(sc, 3), P, sc.title);
+    const file = new File([blob], safeName(sc.title) + '.pdf', { type: 'application/pdf' });
+    const r = await shareFile(file);
+    if (r === 'shared') setSt('Pronto.');
+    else if (r === 'cancelled') setSt('Você cancelou. Toque em Salvar PDF quando quiser.');
+    else setSt('PDF aberto. Use o botão Compartilhar do iPhone para imprimir ou salvar.');
+  } catch (e) { setSt('Não foi possível gerar o PDF.', true); }
+};
+
+/* Cópia de segurança */
+$('#backupBtn').onclick = async () => {
+  const data = JSON.stringify({ app: 'Bateria Score', version: 1, exported: new Date().toISOString(), scores: library }, null, 1);
+  const d = new Date().toISOString().slice(0, 10);
+  await shareFile(new File([data], `Bateria Score backup ${d}.json`, { type: 'application/json' }));
+};
+$('#importFile').onchange = async e => {
+  const f = e.target.files && e.target.files[0]; e.target.value = '';
+  if (!f) return;
+  try {
+    const obj = JSON.parse(await f.text());
+    const list = (Array.isArray(obj) ? obj : obj.scores || []).filter(s => s && s.id && Array.isArray(s.measures) && s.measures.length);
+    if (!list.length) throw new Error('vazio');
+    let added = 0, updated = 0;
+    list.forEach(s => {
+      const i = library.findIndex(x => x.id === s.id);
+      if (i < 0) { library.push(s); added++; } else if ((s.modified || 0) > (library[i].modified || 0)) { library[i] = s; updated++; }
+    });
+    Store.writeLocal();
+    $('#storeHint').textContent = `Importado: ${added} nova(s), ${updated} atualizada(s).`;
+    renderLibrary();
+    $('#storeHint').textContent = `Importado: ${added} nova(s), ${updated} atualizada(s).`;
+  } catch (err) { $('#storeHint').textContent = 'Este arquivo não é uma cópia de segurança do Bateria Score.'; }
+};
+
+/* Dica de instalação e modo offline */
+(() => {
+  const standalone = window.navigator.standalone === true || (window.matchMedia && matchMedia('(display-mode: standalone)').matches);
+  let dismissed = false; try { dismissed = localStorage.getItem('bs-install-ok') === '1'; } catch (e) {}
+  const ios = /iPhone|iPad|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+  if (ios && !standalone && !dismissed) $('#installNote').hidden = false;
+  $('#installClose').onclick = () => { $('#installNote').hidden = true; try { localStorage.setItem('bs-install-ok', '1'); } catch (e) {} };
+  if ('serviceWorker' in navigator && location.protocol === 'https:') navigator.serviceWorker.register('sw.js').catch(() => {});
+})();
+
+/* ================= Início ================= */
+buildPalette();
+render();
+setSave('Exemplo · carregando…');
+Store.init().then(list => {
+  library = Array.isArray(list) ? list.filter(s => s && Array.isArray(s.measures) && s.measures.length) : [];
+  S.ready = true;
+  if (!S.isExample) { if (!library.some(s => s.id === S.score.id)) library.push(S.score); Store.schedule(S.score); }
+  else if (library.length && !S.undo.length) {
+    loadScore([...library].sort((a, b) => b.modified - a.modified)[0]);
+  }
+  const labels = { local: 'Salvo neste iPhone', memory: 'Não será salvo ao fechar' };
+  setSave(S.isExample ? 'Exemplo' : labels[Store.mode], Store.mode === 'memory');
+  renderLibrary();
+});
+})();
+</script>
+</body>
+</html>
