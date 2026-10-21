@@ -3,7 +3,7 @@
   "short_name": "Bateria Score",
   "description": "Editor de partitura para bateria com impressão em PDF.",
   "lang": "pt-BR",
-  "start_url": "./",
+  "start_url": "./index.html",
   "scope": "./",
   "display": "standalone",
   "orientation": "any",

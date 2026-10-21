@@ -1,7 +1,7 @@
 // Bateria Score — funciona sem internet depois da primeira abertura.
 // Ao publicar uma versão nova, mude o número abaixo.
-const CACHE = 'bateria-score-v1';
-const FILES = ['./', './index.html', './manifest.webmanifest',
+const CACHE = 'bateria-score-v2';
+const FILES = ['./index.html', './manifest.webmanifest',
   './icon-192.png', './icon-512.png', './apple-touch-icon.png'];
 
 self.addEventListener('install', e => {
