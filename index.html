@@ -91,7 +91,25 @@ button { cursor: pointer; -webkit-tap-highlight-color: transparent; touch-action
 #paperHead p { margin: 4px 0 0; font-family: Georgia, serif; font-style: italic; font-size: 14px; }
 #paperMeta { display: flex; justify-content: space-between; font-size: 13px; padding: 6px 4px 0; font-family: Georgia, serif; min-height: 6px; }
 #systems canvas { display: block; touch-action: manipulation; }
-#addEnd { display: block; margin: 8px auto 18px; border: 1px dashed #b9c0cc; background: transparent; color: #3a4252; border-radius: 8px; padding: 8px 14px; font-weight: 600; }
+.addrow { display: flex; justify-content: center; gap: 10px; margin: 8px 0 18px; }
+.addrow button { border: 1px dashed #b9c0cc; background: transparent; color: #3a4252; border-radius: 8px; padding: 8px 14px; font-weight: 600; }
+.ghostbtn { display: block; margin: 8px auto 0; border: 1px dashed #c3c9d4; background: transparent; color: #5b6372; border-radius: 8px; padding: 6px 12px; font-size: 13.5px; font-weight: 600; }
+/* Texto da lição, sempre sobre o papel branco */
+.rt { font-family: Georgia, "Times New Roman", serif; color: #1a1a1a; font-size: 15.5px; line-height: 1.5; text-align: left; }
+.rt p, #paperHead .rt p { margin: 0 0 6px; font-style: normal; font-size: inherit; }
+.rt .rt-h { font-weight: 700; font-size: 16.5px; margin: 10px 0 4px; }
+.rt .rt-li { position: relative; padding-left: 20px; margin: 0 0 3px; }
+.rt .rt-li::before { content: "•"; position: absolute; left: 6px; }
+.rt .rt-li[data-n]::before { content: attr(data-n) "."; left: 0; font-variant-numeric: tabular-nums; }
+.rt .rt-gap { height: 6px; }
+.rt .rt-title { font-weight: 700; font-size: 17px; margin: 0 0 4px; }
+.intro { padding: 10px 4px 0; max-width: 68ch; margin: 0 auto; }
+.tblock { padding: 14px 14px 2px; cursor: pointer; border-radius: 6px; max-width: 72ch; }
+.tblock:hover, .intro:hover { background: rgba(29,76,204,0.05); }
+.tblock .pg { display: inline-block; font-family: var(--ui); font-size: 11.5px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: #5b6372; border: 1px solid #d3d8e1; border-radius: 4px; padding: 1px 6px; margin-bottom: 6px; }
+.field.area { display: block; }
+.field textarea { width: 100%; min-height: 200px; box-sizing: border-box; border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; background: var(--bg); font-family: Georgia, "Times New Roman", serif; font-size: 16px; line-height: 1.45; resize: vertical; }
+.danger-btn { color: var(--danger); justify-self: start; }
 /* No celular em pé, o papel ocupa a largura toda para a pauta ficar maior */
 @media (max-width: 600px) {
   #desk > .gut.paperwrap { padding-left: 0; padding-right: 0; }
@@ -248,9 +266,11 @@ button { cursor: pointer; -webkit-tap-highlight-color: transparent; touch-action
           <h1 id="pTitle"></h1>
           <p id="pSub" hidden></p>
           <div id="paperMeta"><span id="pTempo"></span><span id="pAuthor"></span></div>
+          <div id="pIntro" class="rt intro" hidden></div>
+          <button class="ghostbtn" id="introAdd">+ Escrever o texto da lição</button>
         </div>
         <div id="systems"></div>
-        <button id="addEnd">+ Adicionar compasso</button>
+        <div class="addrow"><button id="addEnd">+ Compasso</button><button id="addText">+ Texto</button></div>
       </div>
     </div>
   </main>
@@ -284,7 +304,8 @@ button { cursor: pointer; -webkit-tap-highlight-color: transparent; touch-action
 
       <div class="tabpanel" id="p-bar" role="tabpanel" hidden>
         <div class="bargrid">
-          <button class="primary" id="b-sheet">Fórmula, texto e casas…</button>
+          <button class="primary" id="b-sheet">Fórmula, seção e casas…</button>
+          <button class="primary" id="b-text">Texto antes deste compasso…</button>
           <button id="b-add">+ Compasso</button>
           <button id="b-dup">Duplicar</button>
           <button id="b-copy">Copiar</button>
@@ -385,6 +406,30 @@ button { cursor: pointer; -webkit-tap-highlight-color: transparent; touch-action
       <div class="field"><button class="lnk" id="mClear">Apagar as notas do compasso</button></div>
       <div class="field"><button class="lnk danger" id="mDelete">Excluir compasso</button></div>
     </div>
+  </div></div>
+</div>
+
+<!-- Texto -->
+<div class="sheet" id="textSheet" hidden>
+  <div class="sheet-bar"><div class="gut"><button class="btn" data-close>Cancelar</button><h2 style="text-align:center" id="tHead">Texto</h2><button class="btn primary" id="tSave">Salvar</button></div></div>
+  <div class="gut"><div class="sheet-body">
+    <p class="hint" id="tWhere"></p>
+    <div class="group">
+      <div class="field" id="tTitleRow"><label for="tTitle" id="tTitleLabel">Título</label><input type="text" id="tTitle" maxlength="80"></div>
+      <div class="field area" id="tBodyRow"><textarea id="tBody" rows="9" placeholder="Escreva aqui a explicação, as instruções do exercício ou suas observações."></textarea></div>
+      <div class="field" id="tPageRow"><label for="tNewPage">Começar numa página nova no PDF</label><input type="checkbox" id="tNewPage"></div>
+    </div>
+    <div class="group" id="tHelp"><h3>Formatação</h3>
+      <div class="legend">
+        <span># Título da seção</span><span>linha de título</span>
+        <span>- item</span><span>lista com marcadores</span>
+        <span>1. item</span><span>lista numerada</span>
+        <span>**palavra**</span><span><b>negrito</b></span>
+        <span>*palavra*</span><span><i>itálico</i></span>
+        <span>linha em branco</span><span>separa parágrafos</span>
+      </div>
+    </div>
+    <button class="btn danger-btn" id="tRemove">Remover este texto</button>
   </div></div>
 </div>
 
@@ -496,6 +541,74 @@ const timeLabel = t => t.symbol === 'common' ? 'C' : t.symbol === 'cut' ? '¢' :
 const newMeasure = time => ({ id: uid(), time: { ...time }, events: [], repeatStart: false, repeatEnd: false });
 const stickTxt = (style, s) => s === 'R' ? (style === 'de' ? 'D' : 'R') : s === 'L' ? (style === 'de' ? 'E' : 'L') : '';
 const visibleEvents = m => m.simile ? [] : m.events;
+const hasText = t => !!(t && ((t.title && t.title.trim()) || (t.body && t.body.trim())));
+
+/* ================= Texto formatado (lições e anotações) ================= */
+// Formato simples: "# título", "- item", "1. item", **negrito**, *itálico*; linha em branco = novo parágrafo.
+function parseRich(src) {
+  const out = [];
+  String(src || '').replace(/\r/g, '').split('\n').forEach(raw => {
+    const line = raw.trim();
+    if (!line) { if (out.length && out[out.length - 1].type !== 'gap') out.push({ type: 'gap' }); return; }
+    let m;
+    if ((m = line.match(/^#{1,3}\s+(.*)$/))) out.push({ type: 'h', runs: runs(m[1]) });
+    else if ((m = line.match(/^[-•*]\s+(.*)$/))) out.push({ type: 'li', runs: runs(m[1]) });
+    else if ((m = line.match(/^(\d+)[.)]\s+(.*)$/))) out.push({ type: 'li', n: m[1], runs: runs(m[2]) });
+    else out.push({ type: 'p', runs: runs(line) });
+  });
+  while (out.length && out[out.length - 1].type === 'gap') out.pop();
+  return out;
+  function runs(t) {
+    const r = [];
+    t.split(/(\*\*[^*]+\*\*|\*[^*\s][^*]*\*)/).forEach(part => {
+      if (!part) return;
+      if (/^\*\*[^*]+\*\*$/.test(part)) r.push({ t: part.slice(2, -2), b: true });
+      else if (/^\*[^*]+\*$/.test(part)) r.push({ t: part.slice(1, -1), i: true });
+      else r.push({ t: part });
+    });
+    return r;
+  }
+}
+const escHtml = t => String(t).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+function richHtml(src) {
+  const rh = rs => rs.map(r => r.b ? `<b>${escHtml(r.t)}</b>` : r.i ? `<i>${escHtml(r.t)}</i>` : escHtml(r.t)).join('');
+  return parseRich(src).map(p => p.type === 'gap' ? '<div class="rt-gap"></div>'
+    : p.type === 'h' ? `<div class="rt-h">${rh(p.runs)}</div>`
+    : p.type === 'li' ? `<div class="rt-li"${p.n ? ` data-n="${p.n}"` : ''}>${rh(p.runs)}</div>`
+    : `<p>${rh(p.runs)}</p>`).join('');
+}
+// Quebra o texto em linhas para desenhar no PDF. Cada linha: { h, draw(ctx, x, y) }
+function richLines(mc, src, width, size) {
+  const lines = [], font = (r, h) => `${r.b || h ? 'bold ' : ''}${r.i ? 'italic ' : ''}${h ? size * 1.18 : size}px Georgia, "Times New Roman", serif`;
+  parseRich(src).forEach((p, pi) => {
+    if (p.type === 'gap') { lines.push({ h: size * 0.55, draw() {} }); return; }
+    const isH = p.type === 'h', indent = p.type === 'li' ? size * 1.5 : 0, lh = (isH ? size * 1.18 : size) * 1.42;
+    if (isH && pi > 0) lines.push({ h: size * 0.5, draw() {} });
+    const words = [];
+    p.runs.forEach(r => r.t.split(/(\s+)/).forEach(w => { if (w) words.push({ ...r, t: w }); }));
+    let cur = [], x = 0;
+    const flush = (first) => {
+      const items = cur, bullet = first && p.type === 'li' ? (p.n ? p.n + '.' : '•') : '';
+      lines.push({ h: lh, draw(ctx, x0, y) {
+        ctx.fillStyle = INK; ctx.textBaseline = 'top'; ctx.textAlign = 'left';
+        if (bullet) { ctx.font = font({}, false); ctx.fillText(bullet, x0 + (p.n ? 0 : size * 0.45), y); }
+        items.forEach(it => { ctx.font = font(it, isH); ctx.fillText(it.t, x0 + indent + it.x, y); });
+      } });
+      cur = []; x = 0;
+    };
+    let first = true;
+    words.forEach(w => {
+      mc.font = font(w, isH);
+      const ww = mc.measureText(w.t).width;
+      if (/^\s+$/.test(w.t)) { if (cur.length) { x += ww; } return; }
+      if (cur.length && x + ww > width - indent) { flush(first); first = false; }
+      cur.push({ ...w, x }); x += ww;
+    });
+    if (cur.length) flush(first);
+    lines.push({ h: size * 0.3, draw() {} });
+  });
+  return lines;
+}
 
 function beamGroupLengths(t) {
   if (t.unit <= 4) return Array(Math.max(1, t.beats * 4 / t.unit)).fill(F(1, 4));
@@ -564,24 +677,22 @@ function layoutSystems(score, width, sp, originX) {
   });
   const clefW = sp * 3.6;
   const lines = [];
-  if (score.perLine > 0) {
-    for (let i = 0; i < infos.length; i += score.perLine) lines.push([...Array(Math.min(score.perLine, infos.length - i)).keys()].map(k => k + i));
-  } else {
-    let cur = [], w = clefW;
-    infos.forEach((inf, i) => {
-      if (cur.length && w + inf.total > width) { lines.push(cur); cur = []; w = clefW; }
-      cur.push(i); w += inf.total;
-    });
-    if (cur.length) lines.push(cur);
-  }
+  let cur = [], w = clefW;
+  infos.forEach((inf, i) => {
+    const brk = cur.length && (hasText(ms[i].textBefore) || (score.perLine > 0 ? cur.length >= score.perLine : w + inf.total > width));
+    if (brk) { lines.push(cur); cur = []; w = clefW; }
+    cur.push(i); w += inf.total;
+  });
+  if (cur.length) lines.push(cur);
   return lines.map((line, li) => {
     const natural = clefW + line.reduce((a, i) => a + infos[i].total, 0);
     const contentSum = Math.max(1, line.reduce((a, i) => a + infos[i].content, 0));
     let extra = width - natural;
-    if (extra > 0 && li === lines.length - 1 && natural < width * 0.6) extra = 0;
+    const endsSection = li === lines.length - 1 || hasText(ms[lines[li + 1][0]].textBefore);
+    if (extra > 0 && endsSection && natural < width * 0.6) extra = 0;
     const factor = Math.max(0.5, (contentSum + extra) / contentSum);
     let x = originX + clefW;
-    let hasAcc = false, hasTup = false, hasStk = false, hasDyn = false, hasLabel = false, hasVolta = false, hasTimes = false;
+    let hasAcc = false, hasTup = false, hasStk = false, hasDyn = false, hasLabel = false, hasVolta = false, hasTimes = false, hasNoteText = false;
     const measures = line.map(i => {
       const inf = infos[i], m = ms[i], x0 = x;
       if (m.label) hasLabel = true;
@@ -598,6 +709,7 @@ function layoutSystems(score, width, sp, originX) {
         if (e.tuplet) hasTup = true;
         if (!isRest(e) && e.sticking !== 'none') hasStk = true;
         if (e.dyn) hasDyn = true;
+        if (e.text) hasNoteText = true;
         return le;
       });
       const contentEnd = contentX + inf.content * factor;
@@ -606,11 +718,11 @@ function layoutSystems(score, width, sp, originX) {
       return { index: i, x0, x1, showTime: inf.showTime, timeX, contentX, contentEnd, events };
     });
     const basePad = hasTup ? sp * 8.5 : hasAcc ? sp * 7 : hasTimes ? sp * 6.2 : sp * 5.5;
-    const topPad = basePad + (hasVolta ? sp * 2.4 : 0) + (hasLabel ? sp * 2.8 : 0);
+    const topPad = basePad + (hasNoteText ? sp * 2.4 : 0) + (hasVolta ? sp * 2.4 : 0) + (hasLabel ? sp * 2.8 : 0);
     const stkY = 6.4, dynY = hasStk ? 8.8 : 6.6;
     const bottomPad = hasDyn ? sp * (dynY + 2.2 - 4) : hasStk ? sp * 7 : sp * 3.5;
     return { y: 0, sp, x0: originX, x1: x, measures, topPad, basePad, bottomPad, height: topPad + 4 * sp + bottomPad,
-      hasVolta, hasLabel, stkY, dynY };
+      hasVolta, hasLabel, hasNoteText, stkY, dynY, textBefore: ms[line[0]].textBefore || null, firstMeasure: line[0] };
   });
 }
 
@@ -722,6 +834,7 @@ function drawSystem(ctx, score, s, o) {
           placed[lm.index + ':' + i] = { headX: le.headX, notes: geos[i].notes.map(p => ({ inst: p.n.inst, x: p.x, y: p.y })) };
         } else drawRest(e.value, e.dots, le.headX);
         if (e.dyn) drawDyn(e.dyn, le.headX + hw / 2);
+        if (e.text) { ink(); text(e.text, `italic ${sp * 1.4}px Georgia, "Times New Roman", serif`, le.headX, top - s.basePad - sp * 1.0, 'left'); }
       });
       bgs.forEach(g => drawBeams(g, m.events, geos));
       drawTuplets(m, lm, geos, bgs);
@@ -741,7 +854,8 @@ function drawSystem(ctx, score, s, o) {
 
   function drawAbove(m, lm) {
     ink();
-    const voltaY = top - s.basePad - sp * 0.7;
+    const T = s.hasNoteText ? sp * 2.4 : 0;
+    const voltaY = top - s.basePad - T - sp * 0.7;
     if (m.volta) {
       const y = voltaY - sp * 0.9, xL = lm.x0 + sp * 0.4, xR = lm.x1 - sp * 0.6;
       ctx.lineWidth = sp * 0.13; ctx.beginPath();
@@ -751,7 +865,7 @@ function drawSystem(ctx, score, s, o) {
       text(m.volta + '.', `bold ${sp * 1.3}px Georgia, serif`, xL + sp * 0.5, y + sp * 1.0, 'left');
     }
     if (m.label) {
-      const y = top - s.basePad - (s.hasVolta ? sp * 3.6 : sp * 1.5);
+      const y = top - s.basePad - T - (s.hasVolta ? sp * 3.6 : sp * 1.5);
       ctx.font = `bold ${sp * 1.45}px Barlow, Helvetica, sans-serif`;
       const w = ctx.measureText(m.label).width + sp * 1.2;
       const x = lm.x0 + sp * 0.2;
@@ -1079,42 +1193,74 @@ function drawSystem(ctx, score, s, o) {
 
 /* ================= Páginas para impressão ================= */
 function paperSize(p) { return p === 'letter' ? { w: 612, h: 792 } : { w: 595.28, h: 841.89 }; }
-function renderPages(score, scale) {
-  const P = paperSize(score.paper), margin = 40, sp = 5.2, footer = 24;
-  const systems = layoutSystems(score, P.w - 2 * margin, sp, margin);
-  const headerH = 32 + (score.subtitle ? 18 : 0) + 26;
-  const pages = [[]]; let y = margin + headerH;
-  for (const s of systems) {
-    if (y + s.height > P.h - margin - footer && pages[pages.length - 1].length) { pages.push([]); y = margin; }
-    s.y = y + s.topPad; pages[pages.length - 1].push(s); y += s.height + sp * 1.5;
+function measureCtx() { if (!measureCtx.c) measureCtx.c = document.createElement('canvas').getContext('2d'); return measureCtx.c; }
+function drawScoreHeader(ctx, score, P, margin, y0) {
+  ctx.fillStyle = INK; ctx.strokeStyle = INK; ctx.textAlign = 'center'; ctx.textBaseline = 'top';
+  let hy = y0;
+  ctx.font = 'bold 22px Georgia, "Times New Roman", serif'; ctx.fillText(score.title, P.w / 2, hy); hy += 32;
+  if (score.subtitle) { ctx.font = 'italic 13px Georgia, serif'; ctx.fillText(score.subtitle, P.w / 2, hy); hy += 18; }
+  const ly = hy + 12;
+  if (score.tempo > 0) {
+    ctx.beginPath(); ctx.ellipse(margin + 3.5, ly, 3.6, 2.6, -0.35, 0, Math.PI * 2); ctx.fill();
+    ctx.lineWidth = 0.9; ctx.beginPath(); ctx.moveTo(margin + 6.7, ly); ctx.lineTo(margin + 6.7, ly - 15); ctx.stroke();
+    ctx.font = '600 12px Barlow, Helvetica, sans-serif'; ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+    ctx.fillText(' = ' + score.tempo, margin + 9, ly - 3);
   }
-  return pages.map((list, pi) => {
-    const c = document.createElement('canvas');
-    c.width = Math.round(P.w * scale); c.height = Math.round(P.h * scale);
-    const ctx = c.getContext('2d');
-    ctx.scale(scale, scale);
-    ctx.fillStyle = PAPER; ctx.fillRect(0, 0, P.w, P.h);
-    ctx.fillStyle = INK; ctx.textAlign = 'center'; ctx.textBaseline = 'top';
-    if (pi === 0) {
-      let hy = margin;
-      ctx.font = 'bold 22px Georgia, "Times New Roman", serif'; ctx.fillText(score.title, P.w / 2, hy); hy += 32;
-      if (score.subtitle) { ctx.font = 'italic 13px Georgia, serif'; ctx.fillText(score.subtitle, P.w / 2, hy); hy += 18; }
-      const ly = hy + 12;
-      if (score.tempo > 0) {
-        ctx.beginPath(); ctx.ellipse(margin + 3.5, ly, 3.6, 2.6, -0.35, 0, Math.PI * 2); ctx.fill();
-        ctx.lineWidth = 0.9; ctx.beginPath(); ctx.moveTo(margin + 6.7, ly); ctx.lineTo(margin + 6.7, ly - 15); ctx.stroke();
-        ctx.font = '600 12px Barlow, Helvetica, sans-serif'; ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
-        ctx.fillText(' = ' + score.tempo, margin + 9, ly - 3);
+  if (score.author) { ctx.font = '11px Georgia, serif'; ctx.textAlign = 'right'; ctx.textBaseline = 'middle'; ctx.fillText(score.author, P.w - margin, ly); }
+}
+// Monta a partitura como uma sequência de blocos (cabeçalho, linhas de texto, pautas) e divide em páginas
+function docLayout(score) {
+  const P = paperSize(score.paper), margin = 40, sp = 5.2, footer = 24, W = P.w - 2 * margin, mc = measureCtx();
+  const blocks = [];
+  const headH = 32 + (score.subtitle ? 18 : 0) + 26;
+  blocks.push({ h: headH, draw: (ctx, y) => drawScoreHeader(ctx, score, P, margin, y) });
+  if ((score.intro || '').trim()) {
+    richLines(mc, score.intro, W, 10.5).forEach(l => blocks.push({ h: l.h, draw: (ctx, y) => l.draw(ctx, margin, y) }));
+    blocks.push({ h: 8, spacer: true, draw() {} });
+  }
+  const systems = layoutSystems(score, W, sp, margin);
+  systems.forEach((sy, si) => {
+    if (hasText(sy.textBefore)) {
+      const t = sy.textBefore;
+      blocks.push({ h: si === 0 ? 4 : 12, spacer: true, brk: !!t.newPage && si > 0, draw() {} });
+      if (t.title && t.title.trim()) {
+        blocks.push({ h: 20, keep: true, draw: (ctx, y) => { ctx.fillStyle = INK; ctx.textAlign = 'left'; ctx.textBaseline = 'top'; ctx.font = 'bold 13.5px Georgia, "Times New Roman", serif'; ctx.fillText(t.title.trim(), margin, y + 2); } });
       }
-      if (score.author) { ctx.font = '11px Georgia, serif'; ctx.textAlign = 'right'; ctx.textBaseline = 'middle'; ctx.fillText(score.author, P.w - margin, ly); }
+      const body = richLines(mc, t.body, W, 10.5);
+      body.forEach((l, k) => blocks.push({ h: l.h, keep: k === body.length - 1, draw: (ctx, y) => l.draw(ctx, margin, y) }));
+      blocks.push({ h: 2, draw() {} });
     }
-    list.forEach((s, si) => drawSystem(ctx, score, s, { isFirst: pi === 0 && si === 0 }));
-    if (pages.length > 1) {
-      ctx.fillStyle = '#555'; ctx.font = '8px Helvetica, sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'top';
-      ctx.fillText(`${score.title} — página ${pi + 1} de ${pages.length}`, P.w / 2, P.h - margin + 6);
-    }
-    return c;
+    blocks.push({ h: sy.height + sp * 1.5, draw: (ctx, y) => { sy.y = y + sy.topPad; drawSystem(ctx, score, sy, { isFirst: si === 0 }); } });
   });
+  const pages = [[]], limit = P.h - margin - footer;
+  let y = margin;
+  blocks.forEach((b, i) => {
+    const page = pages[pages.length - 1];
+    if (b.brk && page.length) { pages.push([]); y = margin; }
+    let need = b.h;
+    if (b.keep) { for (let k = i + 1; k < blocks.length; k++) { need += blocks[k].h; if (!blocks[k].keep) break; } need = Math.min(need, limit - margin); }
+    if (y + need > limit && pages[pages.length - 1].length) { pages.push([]); y = margin; if (b.spacer) return; }
+    pages[pages.length - 1].push({ b, y }); y += b.h;
+  });
+  return { P, margin, pages, score };
+}
+function drawDocPage(doc, pi, scale) {
+  const { P, margin, pages, score } = doc;
+  const c = document.createElement('canvas');
+  c.width = Math.round(P.w * scale); c.height = Math.round(P.h * scale);
+  const ctx = c.getContext('2d');
+  ctx.scale(scale, scale);
+  ctx.fillStyle = PAPER; ctx.fillRect(0, 0, P.w, P.h);
+  pages[pi].forEach(({ b, y }) => { ctx.save(); b.draw(ctx, y); ctx.restore(); });
+  if (pages.length > 1) {
+    ctx.fillStyle = '#555'; ctx.font = '8px Helvetica, sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'top';
+    ctx.fillText(`${score.title} — página ${pi + 1} de ${pages.length}`, P.w / 2, P.h - margin + 6);
+  }
+  return c;
+}
+function renderPages(score, scale) {
+  const doc = docLayout(score);
+  return doc.pages.map((_, i) => drawDocPage(doc, i, scale));
 }
 
 /* ================= Som: bateria acústica gravada (amostras) ================= */
@@ -1424,23 +1570,25 @@ function sampleScore() {
   const ev = (value, insts, o = {}) => ({ id: uid(), value, dots: o.dots || 0,
     notes: insts.map(k => ({ inst: k, ghost: !!(o.ghost && o.ghost.includes(k)) })),
     tuplet: o.tuplet || null, accent: o.accent || 'none', ornament: o.ornament || 'none', sticking: o.sticking || 'none',
-    tie: !!o.tie, dyn: o.dyn || '', choke: !!o.choke });
+    tie: !!o.tie, dyn: o.dyn || '', choke: !!o.choke, text: o.text || '' });
   const grp = (a, n, u) => ({ gid: uid(), actual: a, normal: n, unit: u });
   const M = (time, events, x = {}) => ({ id: uid(), time: { ...time }, events, repeatStart: !!x.rs, repeatEnd: !!x.re,
-    repeatTimes: x.times || 2, volta: x.volta || 0, label: x.label || '', simile: !!x.simile });
+    repeatTimes: x.times || 2, volta: x.volta || 0, label: x.label || '', simile: !!x.simile, textBefore: x.text || null });
   const m1 = []; for (let i = 0; i < 8; i++) { const ins = ['hiHat']; if (i === 0 || i === 4) ins.push('bass'); if (i === 2 || i === 6) ins.push('snare'); m1.push(ev(8, ins, { accent: (i === 2 || i === 6) ? 'accent' : 'none', dyn: i === 0 ? 'mf' : '' })); }
   const m2 = []; for (let i = 0; i < 16; i++) { const ins = ['hiHat']; if ([0, 6, 8].includes(i)) ins.push('bass'); if ([4, 12, 7, 9, 15].includes(i)) ins.push('snare'); m2.push(ev(16, ins, { ghost: [7, 9, 15].includes(i) ? ['snare'] : [], accent: (i === 4 || i === 12) ? 'accent' : 'none' })); }
   const m3 = []; let hand = 'R'; for (let b = 0; b < 4; b++) { const t = grp(3, 2, 8); for (let k = 0; k < 3; k++) { m3.push(ev(8, ['snare'], { tuplet: t, accent: k === 0 ? 'accent' : 'none', sticking: hand, dyn: b === 0 && k === 0 ? 'p' : b === 2 && k === 0 ? 'cresc' : '' })); hand = hand === 'R' ? 'L' : 'R'; } }
   const m4 = [ev(4, ['crash', 'bass'], { accent: 'accent', dyn: 'f' }), ev(4, ['snare'], { ornament: 'flam' }), ev(8, ['tom1'], { sticking: 'R' }), ev(8, ['tom2'], { sticking: 'L' }), ev(8, ['floorTom'], { sticking: 'R' }), ev(8, ['floorTom', 'bass'], { sticking: 'L' })];
   const m5 = [ev(8, ['hiHat', 'bass']), ev(8, ['hiHat']), ev(8, ['hiHat']), ev(8, ['hiHat', 'snare'], { accent: 'accent' }), ev(8, ['hiHat']), ev(8, ['hiHat', 'snare'], { ghost: ['snare'] })];
-  const m6 = [ev(4, ['ride', 'bass'], { dots: 1 }), ev(8, ['snare'], { ornament: 'drag' }), ev(8, []), ev(8, ['hiHatOpen'], { accent: 'marcato' })];
+  const m6 = [ev(4, ['ride', 'bass'], { dots: 1 }), ev(8, ['snare'], { ornament: 'drag' }), ev(8, []), ev(8, ['hiHatOpen'], { accent: 'marcato', text: 'abrir' })];
   const m7 = []; const q = grp(5, 4, 16); for (let k = 0; k < 5; k++) m7.push(ev(16, ['snare'], { tuplet: q, accent: k === 0 ? 'accent' : 'none' }));
   m7.push(ev(4, ['snare'], { ornament: 'trem2' })); const s6 = grp(6, 4, 16); ['tom1', 'tom1', 'tom2', 'tom3', 'floorTom', 'floorTom'].forEach(k => m7.push(ev(16, [k], { tuplet: s6 }))); m7.push(ev(4, ['crossStick']));
   const m8 = [ev(2, ['crash', 'bass'], { accent: 'accent', tie: true, dyn: 'ff' }), ev(4, ['crash', 'bass']), ev(4, ['splash'], { choke: true })];
   return { id: uid(), title: 'Exercício de demonstração', subtitle: 'Grooves, notas fantasma e quiálteras', author: 'Bateria Score',
     tempo: 90, perLine: 0, paper: 'a4', sticking: 'rl', modified: Date.now(), playback: { metro: false, loop: false, countIn: true },
-    measures: [M(four, m1, { rs: 1, label: 'A' }), M(four, [], { simile: true }), M(four, m2, { re: 1, times: 3 }), M(four, m3, { label: 'B' }), M(four, m4),
-               M(six8, m5, { rs: 1 }), M(six8, m6, { re: 1, volta: 1 }), M(six8, clone(m6).map(e => ({ ...e, id: uid() })).slice(0, 2).concat([ev(4, ['crash'], { accent: 'accent' })]), { volta: 2 }),
+    intro: 'Nesta lição você vai trabalhar **grooves com notas fantasma**, tercinas e viradas.\n\n- Comece devagar, com o metrônomo a 70 BPM\n- Suba 5 BPM quando tocar 4 vezes seguidas sem erro\n- As notas entre parênteses são *bem* fracas',
+    measures: [M(four, m1, { rs: 1, label: 'A', text: { title: 'Exercício 1 — Groove com notas fantasma', body: 'Toque os compassos 1 a 3 três vezes. Mantenha o chimbal leve e constante.', newPage: false } }), M(four, [], { simile: true }), M(four, m2, { re: 1, times: 3 }),
+               M(four, m3, { label: 'B', text: { title: 'Exercício 2 — Tercinas e virada', body: 'Mantenha a manulação alternada e acentue o início de cada tercina.', newPage: false } }), M(four, m4),
+               M(six8, m5, { rs: 1, text: { title: 'Exercício 3 — Compasso 6/8', body: 'Conte em dois tempos: **1** 2 3 **4** 5 6.', newPage: false } }), M(six8, m6, { re: 1, volta: 1 }), M(six8, clone(m6).map(e => ({ ...e, id: uid() })).slice(0, 2).concat([ev(4, ['crash'], { accent: 'accent' })]), { volta: 2 }),
                M(four, m7, { label: 'Final' }), M(four, m8)] };
 }
 function blankScore(n) {
@@ -1493,12 +1641,14 @@ function evAt(r) { const m = r && S.score.measures[r.m]; return (m && !m.simile 
 function msg(t) { S.message = t; renderStatus(); }
 function normalize(score) {
   score.playback = score.playback || { metro: true, loop: false, countIn: true };
+  if (score.intro == null) score.intro = '';
   score.measures.forEach(m => {
     if (m.repeatTimes == null) m.repeatTimes = 2;
     if (m.volta == null) m.volta = 0;
     if (m.label == null) m.label = '';
     m.simile = !!m.simile;
-    m.events.forEach(e => { if (e.tie == null) e.tie = false; if (e.dyn == null) e.dyn = ''; if (e.choke == null) e.choke = false; if (!e.ornament) e.ornament = 'none'; });
+    if (m.textBefore === undefined) m.textBefore = null;
+    m.events.forEach(e => { if (e.text == null) e.text = ''; if (e.tie == null) e.tie = false; if (e.dyn == null) e.dyn = ''; if (e.choke == null) e.choke = false; if (!e.ornament) e.ornament = 'none'; });
   });
   return score;
 }
@@ -1641,6 +1791,7 @@ function modifySelected(fn) {
 function setMarker(key, value) {
   const r = markerTarget(), e = evAt(r);
   if (!e) { msg('Toque numa nota da pauta para aplicar'); return; }
+  if (key === 'text') { openText({ mode: 'note', ref: r }); return; }
   if (isRest(e) && key !== 'dyn') { msg('Escolha uma nota, não uma pausa'); return; }
   edit(s => {
     const x = s.measures[r.m].events[r.i];
@@ -1769,7 +1920,7 @@ function buildPalette() {
   segButtons($('#g-stick'), [['none', '—', 'Sem manulação'], ['R', 'R', 'Mão direita'], ['L', 'L', 'Mão esquerda']]);
   segButtons($('#g-orn'), Object.entries(ORN).map(([k, v]) => [k, k === 'none' ? '—' : v, v]));
   segButtons($('#g-tup'), [['', '—', 'Sem quiáltera'], ['3:2', '3', 'Tercina 3:2'], ['2:3', '2', 'Duína 2:3'], ['4:3', '4', 'Quartina 4:3'], ['5:4', '5', 'Quintina 5:4'], ['6:4', '6', 'Sextina 6:4'], ['7:4', '7', 'Septina 7:4'], ['9:8', '9', 'Novena 9:8']]);
-  segButtons($('#g-mark'), [['tie', 'Ligadura ‿', 'Ligar à próxima nota'], ['choke', 'Abafar ’', 'Abafar o prato (choke)']]);
+  segButtons($('#g-mark'), [['tie', 'Ligadura ‿', 'Ligar à próxima nota'], ['choke', 'Abafar ’', 'Abafar o prato (choke)'], ['text', 'Anotação ✎', 'Escrever um texto curto acima da nota']]);
   segButtons($('#g-dyn'), Object.entries(DYN).map(([k, v]) => [k, v, 'Dinâmica ' + v]), 'dyn');
 
   $('#g-accent').onclick = e => { const b = e.target.closest('button'); if (!b) return; const a = b.dataset.v; S.accent = a; modifySelected(ev => { if (!isRest(ev)) ev.accent = a; }); };
@@ -1825,12 +1976,13 @@ let flashTimer = 0;
 function flash(t) { const st = $('#status'); st.classList.remove('err'); st.textContent = t; clearTimeout(flashTimer); flashTimer = setTimeout(renderStatus, 1800); }
 
 function describe(e) {
-  if (isRest(e)) return 'Pausa de ' + VNAME[e.value].toLowerCase();
+  if (isRest(e)) return 'Pausa de ' + VNAME[e.value].toLowerCase() + (e.text ? ' · “' + e.text + '”' : '');
   const parts = [VNAME[e.value] + (e.dots ? ' ' + '•'.repeat(e.dots) : ''), e.notes.map(n => INST[n.inst].short + (n.ghost ? ' ( )' : '')).join(' + ')];
   if (e.accent !== 'none') parts.push(e.accent === 'accent' ? '>' : '^');
   if (e.ornament !== 'none') parts.push(ORN[e.ornament]);
   if (e.tie) parts.push('ligada');
   if (e.dyn) parts.push(DYN[e.dyn]);
+  if (e.text) parts.push('“' + e.text + '”');
   return parts.join(' · ');
 }
 function renderStatus() {
@@ -1876,6 +2028,9 @@ function renderScore() {
   $('#pTempo').textContent = sc.tempo > 0 ? '♩ = ' + sc.tempo : '';
   $('#pAuthor').textContent = sc.author;
   $('#exampleNote').hidden = !S.isExample;
+  const intro = (sc.intro || '').trim();
+  if ($('#pIntro').dataset.key !== intro) { $('#pIntro').dataset.key = intro; $('#pIntro').innerHTML = richHtml(intro); }
+  $('#pIntro').hidden = !intro; $('#introAdd').hidden = !!intro;
   const host = $('#systems');
   const W = host.clientWidth || 360;
   const sp = Math.max(5.2, Math.min(9, W / 50, window.innerHeight / 52)) * ZOOMS[S.zoom], margin = W < 520 ? 12 : 10;
@@ -1885,9 +2040,21 @@ function renderScore() {
   while (host.children.length > systems.length) host.lastChild.remove();
   systems.forEach((s, i) => {
     s.y = s.topPad;
-    let c = host.children[i];
-    if (!c) { c = document.createElement('canvas'); host.appendChild(c); }
-    c.dataset.idx = i;
+    let w = host.children[i];
+    if (!w) {
+      w = document.createElement('div'); w.className = 'sysw';
+      const tb = document.createElement('div'); tb.className = 'tblock rt'; tb.hidden = true; tb.setAttribute('role', 'button'); tb.tabIndex = 0;
+      w.append(tb, document.createElement('canvas')); host.appendChild(w);
+    }
+    const tb = w.firstChild, c = w.lastChild;
+    c.dataset.idx = i; tb.dataset.m = s.firstMeasure;
+    const key = hasText(s.textBefore) ? JSON.stringify(s.textBefore) : '';
+    if (tb.dataset.key !== key) {
+      tb.dataset.key = key; tb.hidden = !key;
+      const t = s.textBefore || {};
+      tb.innerHTML = key ? (t.newPage ? '<span class="pg">Página nova no PDF</span>' : '') + (t.title && t.title.trim() ? `<div class="rt-title">${escHtml(t.title.trim())}</div>` : '') + richHtml(t.body) : '';
+      tb.setAttribute('aria-label', 'Editar o texto antes do compasso ' + (s.firstMeasure + 1));
+    }
     const h = Math.ceil(s.height);
     c.style.width = W + 'px'; c.style.height = h + 'px';
     if (c.width !== Math.round(W * dpr) || c.height !== Math.round(h * dpr)) { c.width = Math.round(W * dpr); c.height = Math.round(h * dpr); }
@@ -1907,6 +2074,8 @@ function revealCursor() {
 }
 
 $('#systems').addEventListener('click', e => {
+  const tb = e.target.closest('.tblock');
+  if (tb) { openText({ mode: 'block', m: +tb.dataset.m }); return; }
   const c = e.target.closest('canvas'); if (!c) return;
   const s = systemsCache[+c.dataset.idx]; if (!s) return;
   const r = c.getBoundingClientRect();
@@ -1917,6 +2086,71 @@ $('#systems').addEventListener('click', e => {
   render();
 });
 new ResizeObserver(() => renderScore()).observe($('#systems'));
+$('#systems').addEventListener('keydown', e => { const tb = e.target.closest('.tblock'); if (tb && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); openText({ mode: 'block', m: +tb.dataset.m }); } });
+
+/* ---------- Textos e anotações ---------- */
+let textCtx = null;
+function openText(o) {
+  textCtx = o;
+  const sc = S.score;
+  const show = (id, v) => { $(id).hidden = !v; };
+  let title = '', body = '', newPage = false;
+  if (o.mode === 'intro') {
+    $('#tHead').textContent = 'Texto da lição';
+    $('#tWhere').textContent = 'Aparece logo abaixo do título da partitura, na tela e no PDF.';
+    body = sc.intro || '';
+  } else if (o.mode === 'block' || o.mode === 'end') {
+    const m = o.mode === 'block' ? sc.measures[o.m] : null, t = (m && m.textBefore) || {};
+    $('#tHead').textContent = o.mode === 'end' ? 'Novo texto' : 'Texto';
+    $('#tWhere').textContent = o.mode === 'end' ? 'O texto entra no fim da partitura, seguido de um compasso novo para o próximo exercício.' : `Aparece antes do compasso ${o.m + 1}. A pauta começa numa linha nova depois dele.`;
+    title = t.title || ''; body = t.body || ''; newPage = !!t.newPage;
+  } else {
+    const e = evAt(o.ref);
+    $('#tHead').textContent = 'Anotação';
+    $('#tWhere').textContent = 'Texto curto que aparece acima da nota, por exemplo “abrir o chimbal”, “solo” ou “2ª vez mais forte”.';
+    title = (e && e.text) || '';
+  }
+  $('#tTitleLabel').textContent = o.mode === 'note' ? 'Anotação acima da nota' : 'Título (opcional)';
+  $('#tTitle').maxLength = o.mode === 'note' ? 40 : 80;
+  show('#tTitleRow', o.mode !== 'intro'); show('#tBodyRow', o.mode !== 'note'); show('#tPageRow', o.mode === 'block' || o.mode === 'end');
+  show('#tHelp', o.mode !== 'note');
+  $('#tTitle').value = title; $('#tBody').value = body; $('#tNewPage').checked = newPage;
+  const has = o.mode === 'intro' ? !!(sc.intro || '').trim() : o.mode === 'block' ? hasText(sc.measures[o.m].textBefore) : o.mode === 'note' ? !!title : false;
+  $('#tRemove').hidden = !has;
+  $('#tRemove').textContent = o.mode === 'note' ? 'Remover a anotação' : 'Remover este texto';
+  openSheet('#textSheet');
+  setTimeout(() => { try { (o.mode === 'intro' ? $('#tBody') : o.mode === 'note' ? $('#tTitle') : ($('#tTitle').value ? $('#tBody') : $('#tTitle'))).focus(); } catch (e) {} }, 60);
+}
+function saveText(remove) {
+  const o = textCtx; if (!o) return;
+  const title = remove ? '' : $('#tTitle').value.trim(), body = remove ? '' : $('#tBody').value.replace(/\s+$/, ''), newPage = !remove && $('#tNewPage').checked;
+  const tb = (title || body.trim()) ? { title, body, newPage } : null;
+  if (o.mode === 'intro') edit(s => { s.intro = body; });
+  else if (o.mode === 'block') edit(s => { s.measures[o.m].textBefore = tb; });
+  else if (o.mode === 'end') {
+    if (tb) {
+      edit(s => { const last = s.measures[s.measures.length - 1]; const nm = newMeasure(last.time); nm.textBefore = tb; s.measures.push(nm); });
+      S.selection = null; S.cursor = { m: S.score.measures.length - 1, i: 0 };
+    }
+  } else if (o.mode === 'note') {
+    const r = o.ref;
+    if (evAt(r)) edit(s => { s.measures[r.m].events[r.i].text = title; });
+  }
+  $('#textSheet').hidden = true; textCtx = null;
+  render();
+  if (o.mode === 'end' && tb) revealCursor();
+}
+$('#tSave').onclick = () => saveText(false);
+$('#tRemove').onclick = () => {
+  const b = $('#tRemove');
+  if (b.dataset.confirm === '1') { b.dataset.confirm = ''; saveText(true); return; }
+  b.dataset.confirm = '1'; const old = b.textContent; b.textContent = 'Toque de novo para remover';
+  setTimeout(() => { b.dataset.confirm = ''; b.textContent = old; }, 2500);
+};
+$('#introAdd').onclick = e => { e.stopPropagation(); openText({ mode: 'intro' }); };
+$('#pIntro').onclick = e => { e.stopPropagation(); openText({ mode: 'intro' }); };
+$('#addText').onclick = () => openText({ mode: 'end' });
+$('#b-text').onclick = () => openText({ mode: 'block', m: curMeasure() });
 
 /* Atalhos de teclado (iPad com teclado, computador) */
 document.addEventListener('keydown', e => {
