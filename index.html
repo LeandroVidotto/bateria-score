@@ -161,6 +161,14 @@ button { cursor: pointer; -webkit-tap-highlight-color: transparent; touch-action
 
 .actions { display: flex; align-items: center; gap: 2px; }
 .actions .grow { flex: 1; }
+.icon.eraser.on { background: color-mix(in srgb, var(--danger) 16%, transparent); color: var(--danger); }
+.eraser-bar { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; background: color-mix(in srgb, var(--danger) 10%, var(--panel)); border: 1px solid color-mix(in srgb, var(--danger) 35%, transparent); border-radius: 10px; padding: 6px 6px 6px 10px; font-size: 13px; font-weight: 600; color: var(--danger); }
+.eraser-bar .sp { flex: 1; }
+.eraser-bar .eseg { display: inline-flex; background: color-mix(in srgb, var(--danger) 12%, transparent); border-radius: 8px; padding: 2px; }
+.eraser-bar .eseg button { background: transparent; color: var(--danger); padding: 5px 9px; }
+.eraser-bar .eseg button[aria-pressed="true"] { background: var(--danger); color: #fff; }
+.erasing-text .tblock:not([hidden]), .erasing-text #pIntro:not([hidden]) { outline: 2px dashed rgba(192,53,43,0.7); outline-offset: 2px; background: rgba(192,53,43,0.06); }
+.eraser-bar button { border: 0; border-radius: 8px; padding: 6px 10px; font-weight: 700; font-size: 13px; background: var(--panel); color: var(--fg); white-space: nowrap; }
 .actions .chord { white-space: nowrap; height: 36px; border: 0; border-radius: 10px; background: var(--chip); font-weight: 700; padding: 0 12px; margin-left: 6px; display: inline-flex; align-items: center; gap: 6px; }
 .actions .chord.on { background: var(--accent); color: var(--accent-fg); }
 .zoom { display: inline-flex; align-items: center; background: var(--chip); border-radius: 10px; }
@@ -278,6 +286,7 @@ button { cursor: pointer; -webkit-tap-highlight-color: transparent; touch-action
   <section id="palette" aria-label="Paleta de edição">
     <div class="gut pal" id="pal">
       <div class="status" id="status"></div>
+      <div class="eraser-bar" id="eraserBar" hidden><div class="eseg" role="group" aria-label="O que a borracha apaga"><button id="eraseNotes" aria-pressed="true">Notas</button><button id="eraseBars" aria-pressed="false">Compassos</button><button id="eraseTexts" aria-pressed="false">Textos</button></div><span class="sp"></span><button id="eraseEmpty">Vazios</button><button id="eraserOff">Pronto</button></div>
       <div class="tabs" role="tablist">
         <button class="tab" role="tab" data-tab="notes" id="t-notes">Notas</button>
         <button class="tab" role="tab" data-tab="art" id="t-art">Articulação</button>
@@ -316,7 +325,9 @@ button { cursor: pointer; -webkit-tap-highlight-color: transparent; touch-action
           <button id="b-simile">Repetir anterior (%)</button>
           <button id="b-rs">Início ‖:</button>
           <button id="b-re">Fim :‖</button>
+          <button id="b-clear">Apagar notas (fica o compasso)</button>
           <button class="danger" id="b-del">Excluir compasso</button>
+          <button class="danger" id="b-empty">Apagar compassos vazios</button>
         </div>
       </div>
 
@@ -324,6 +335,7 @@ button { cursor: pointer; -webkit-tap-highlight-color: transparent; touch-action
         <button class="icon" id="leftBtn" aria-label="Nota anterior"><svg viewBox="0 0 24 24"><path d="m15 18-6-6 6-6"/></svg></button>
         <button class="icon" id="rightBtn" aria-label="Próxima nota"><svg viewBox="0 0 24 24"><path d="m9 18 6-6-6-6"/></svg></button>
         <button class="icon" id="delBtn" aria-label="Apagar"><svg viewBox="0 0 24 24"><path d="M21 5H9l-6 7 6 7h12z"/><path d="m17 9-6 6M11 9l6 6"/></svg></button>
+        <button class="icon eraser" id="eraserBtn" aria-label="Borracha: apagar notas, compassos ou textos" aria-pressed="false" title="Borracha"><svg viewBox="0 0 24 24"><path d="m7 21-4.3-4.3a1.5 1.5 0 0 1 0-2.1L13.6 3.7a1.5 1.5 0 0 1 2.1 0l5.6 5.6a1.5 1.5 0 0 1 0 2.1L11 21"/><path d="M7 21h14"/><path d="m9 11 6 6"/></svg></button>
         <button class="chord" id="chordBtn" aria-pressed="false">+ Acorde</button>
         <span class="grow"></span>
         <span class="zoom">
@@ -781,6 +793,20 @@ function drawSystem(ctx, score, s, o) {
       return;
     }
     if (!o.editor || pr) return;
+    if (o.eraser === 'text') return;
+    if (o.eraser === 'notes') {
+      const em = score.measures[lm.index];
+      if (em.events.length || em.simile) { ctx.fillStyle = 'rgba(192,53,43,0.07)'; ctx.fillRect(lm.x0 + 1, top - 3 * sp, lm.x1 - lm.x0 - 2, 10 * sp); }
+      return;
+    }
+    if (o.eraser) {
+      const em = score.measures[lm.index];
+      const empty = !em.simile && !em.events.length;
+      ctx.fillStyle = empty ? 'rgba(192,53,43,0.13)' : 'rgba(192,53,43,0.04)';
+      ctx.fillRect(lm.x0 + 1, top - 3 * sp, lm.x1 - lm.x0 - 2, 10 * sp);
+      if (empty) { ctx.fillStyle = 'rgba(192,53,43,0.75)'; ctx.font = `600 ${sp * 1.3}px Barlow, Helvetica, sans-serif`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText('vazio', (lm.x0 + lm.x1) / 2, top + 6 * sp); }
+      return;
+    }
     const cur = o.selection ? o.selection.m : (o.cursor ? o.cursor.m : -1);
     if (cur === lm.index) { ctx.fillStyle = 'rgba(29,76,204,0.06)'; ctx.fillRect(lm.x0, top - 5 * sp, lm.x1 - lm.x0, 11 * sp); }
     if (o.selection && o.selection.m === lm.index && lm.events[o.selection.i]) {
@@ -1839,10 +1865,56 @@ function pasteMeasure(i) {
 function clearMeasure(i) { edit(s => { s.measures[i].events = []; s.measures[i].simile = false; }); S.selection = null; S.cursor = { m: i, i: 0 }; render(); }
 function deleteMeasure(i) {
   if (S.score.measures.length <= 1) { clearMeasure(i); return; }
-  edit(s => s.measures.splice(i, 1));
+  edit(s => {
+    const gone = s.measures[i], next = s.measures[i + 1];
+    // não perde o texto da lição: passa para o compasso seguinte
+    if (hasText(gone.textBefore) && next && !hasText(next.textBefore)) next.textBefore = gone.textBefore;
+    if (next && gone.repeatStart && !next.repeatStart && !gone.repeatEnd) next.repeatStart = true;
+    s.measures.splice(i, 1);
+    if (s.measures[0]) s.measures[0].simile = false;
+  });
   S.selection = null;
   const m = Math.min(i, S.score.measures.length - 1);
   S.cursor = { m, i: visibleEvents(S.score.measures[m]).length }; render();
+}
+const isEmptyMeasure = m => !m.simile && !m.events.length && !hasText(m.textBefore) && !m.label;
+function eraseEmptyMeasures() {
+  const empty = S.score.measures.filter(isEmptyMeasure).length;
+  if (!empty) { flash('Não há compassos vazios para apagar'); return; }
+  const keep = S.score.measures.length - empty;
+  edit(s => {
+    s.measures = s.measures.filter(m => !isEmptyMeasure(m));
+    if (!s.measures.length) s.measures = [newMeasure({ beats: 4, unit: 4, symbol: 'numeric' })];
+    s.measures[0].simile = false;
+  });
+  S.selection = null; S.cursor = { m: S.score.measures.length - 1, i: visibleEvents(S.score.measures[S.score.measures.length - 1]).length };
+  render();
+  flash(`${empty} compasso${empty > 1 ? 's' : ''} vazio${empty > 1 ? 's' : ''} apagado${empty > 1 ? 's' : ''}${keep ? '' : ''}. Use ↶ para desfazer.`);
+}
+function setEraser(on, what) {
+  S.eraser = on; S.selection = null; S.message = '';
+  if (what) S.eraseWhat = what;
+  if (!S.eraseWhat) S.eraseWhat = 'notes';
+  $('#eraserBtn').classList.toggle('on', on); $('#eraserBtn').setAttribute('aria-pressed', String(on));
+  $('#eraserBar').hidden = !on;
+  $('#eraseNotes').setAttribute('aria-pressed', String(S.eraseWhat === 'notes'));
+  $('#eraseBars').setAttribute('aria-pressed', String(S.eraseWhat === 'bars'));
+  $('#eraseTexts').setAttribute('aria-pressed', String(S.eraseWhat === 'text'));
+  $('#eraseEmpty').hidden = S.eraseWhat !== 'bars';
+  $('#paper').classList.toggle('erasing-text', on && S.eraseWhat === 'text');
+  render();
+}
+// Borracha de textos: apaga o que estiver no lugar tocado
+function eraseTextAt(hit) {
+  const r = hit.ref, m = S.score.measures[r.m];
+  if (hit.type === 'event') {
+    const e = evAt(r);
+    if (e && e.text) { edit(s => { s.measures[r.m].events[r.i].text = ''; }); render(); flash('Anotação apagada. Use ↶ para desfazer.'); return; }
+  }
+  if (m && m.label) { edit(s => { s.measures[r.m].label = ''; }); render(); flash(`Nome da seção do compasso ${r.m + 1} apagado.`); return; }
+  const withText = m && m.events.findIndex(e => e.text);
+  if (withText >= 0) { flash('Toque em cima da nota que tem a anotação'); return; }
+  flash('Nada escrito aqui. Toque num texto, numa anotação ou no nome da seção.');
 }
 function fillRests(i) {
   const m = S.score.measures[i];
@@ -1960,6 +2032,14 @@ function buildPalette() {
   $('#leftBtn').onclick = moveLeft;
   $('#rightBtn').onclick = moveRight;
   $('#delBtn').onclick = deleteBackward;
+  $('#eraserBtn').onclick = () => setEraser(!S.eraser);
+  $('#eraserOff').onclick = () => setEraser(false);
+  $('#eraseNotes').onclick = () => setEraser(true, 'notes');
+  $('#eraseBars').onclick = () => setEraser(true, 'bars');
+  $('#eraseTexts').onclick = () => setEraser(true, 'text');
+  $('#eraseEmpty').onclick = eraseEmptyMeasures;
+  $('#b-empty').onclick = eraseEmptyMeasures;
+  $('#b-clear').onclick = () => { const i = curMeasure(); clearMeasure(i); flash(`Notas do compasso ${i + 1} apagadas. O compasso continua na pauta.`); };
   $('#addEnd').onclick = () => insertMeasure(S.score.measures.length - 1);
   $('#undoBtn').onclick = undo;
   $('#redoBtn').onclick = redo;
@@ -1989,6 +2069,7 @@ function renderStatus() {
   const st = $('#status');
   if (S.message) { st.textContent = S.message; st.classList.add('err'); return; }
   st.classList.remove('err');
+  if (S.eraser) { st.textContent = S.eraseWhat === 'text' ? 'Toque num texto, anotação ou nome de seção para apagar' : S.eraseWhat === 'notes' ? 'Toque num compasso para apagar as notas (o compasso fica na pauta)' : 'Toque num compasso para tirá-lo da pauta (os vazios estão marcados)'; return; }
   const i = curMeasure(), m = S.score.measures[i];
   const sel = evAt(S.selection);
   const head = `Comp. ${i + 1}/${S.score.measures.length} · ${timeLabel(m.time)}`;
@@ -2061,7 +2142,7 @@ function renderScore() {
     const ctx = c.getContext('2d');
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     ctx.fillStyle = PAPER; ctx.fillRect(0, 0, W, h);
-    drawSystem(ctx, sc, s, { editor: true, selection: S.selection, cursor: S.cursor, isFirst: i === 0, playing: S.playRef });
+    drawSystem(ctx, sc, s, { editor: true, selection: S.selection, cursor: S.cursor, isFirst: i === 0, playing: S.playRef, eraser: S.eraser ? S.eraseWhat : false });
   });
 }
 function render() { renderScore(); renderPalette(); }
@@ -2075,12 +2156,31 @@ function revealCursor() {
 
 $('#systems').addEventListener('click', e => {
   const tb = e.target.closest('.tblock');
-  if (tb) { openText({ mode: 'block', m: +tb.dataset.m }); return; }
+  if (tb) {
+    if (S.eraser && S.eraseWhat === 'text') { const mi = +tb.dataset.m; edit(s => { s.measures[mi].textBefore = null; }); render(); flash('Texto apagado. Use ↶ para desfazer.'); return; }
+    openText({ mode: 'block', m: +tb.dataset.m }); return;
+  }
   const c = e.target.closest('canvas'); if (!c) return;
   const s = systemsCache[+c.dataset.idx]; if (!s) return;
   const r = c.getBoundingClientRect();
   const hit = hitTest(e.clientX - r.left, s); if (!hit) return;
   if (Player.playing) stopPlayback();
+  if (S.eraser && S.eraseWhat === 'text') { eraseTextAt(hit); return; }
+  if (S.eraser && S.eraseWhat === 'notes') {
+    const mi = hit.ref.m, m = S.score.measures[mi];
+    if (!m.events.length && !m.simile) { flash(`O compasso ${mi + 1} já está vazio`); return; }
+    edit(s => { s.measures[mi].events = []; s.measures[mi].simile = false; });
+    S.selection = null; S.cursor = { m: mi, i: 0 }; render();
+    flash(`Notas do compasso ${mi + 1} apagadas. O compasso continua na pauta.`);
+    return;
+  }
+  if (S.eraser) {
+    const mi = hit.ref.m;
+    if (S.score.measures.length <= 1 && isEmptyMeasure(S.score.measures[0])) { flash('A partitura precisa de pelo menos um compasso'); return; }
+    deleteMeasure(mi);
+    flash(`Compasso ${mi + 1} apagado. Use ↶ para desfazer.`);
+    return;
+  }
   if (hit.type === 'event') { if (S.selection && !cmpRef(S.selection, hit.ref)) S.selection = null; else select(hit.ref); }
   else setCursor(hit.ref);
   render();
@@ -2148,7 +2248,11 @@ $('#tRemove').onclick = () => {
   setTimeout(() => { b.dataset.confirm = ''; b.textContent = old; }, 2500);
 };
 $('#introAdd').onclick = e => { e.stopPropagation(); openText({ mode: 'intro' }); };
-$('#pIntro').onclick = e => { e.stopPropagation(); openText({ mode: 'intro' }); };
+$('#pIntro').onclick = e => {
+  e.stopPropagation();
+  if (S.eraser && S.eraseWhat === 'text') { edit(s => { s.intro = ''; }); render(); flash('Texto da lição apagado. Use ↶ para desfazer.'); return; }
+  openText({ mode: 'intro' });
+};
 $('#addText').onclick = () => openText({ mode: 'end' });
 $('#b-text').onclick = () => openText({ mode: 'block', m: curMeasure() });
 
@@ -2209,6 +2313,7 @@ $('#libList').addEventListener('click', e => {
 });
 function loadScore(score, example = false) {
   stopPlayback();
+  if (S.eraser) setEraser(false);
   S.score = normalize(score); S.isExample = example; S.selection = null; S.undo = []; S.redo = []; S.lastInserted = null; S.message = '';
   S.cursor = { m: 0, i: visibleEvents(score.measures[0]).length };
   render();
