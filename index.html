@@ -105,6 +105,9 @@ button { cursor: pointer; -webkit-tap-highlight-color: transparent; touch-action
 .rt .rt-title { font-weight: 700; font-size: 17px; margin: 0 0 4px; }
 .intro { padding-top: 10px; }
 .rt { hyphens: auto; -webkit-hyphens: auto; }
+.rt p { text-indent: var(--fi, 0px); }
+.rt.fi-first p { text-indent: 0; }
+.rt.fi-first p:first-of-type { text-indent: var(--fi, 0px); }
 .rt[style*="justify"] .rt-h, .rt[style*="justify"] .rt-title { text-align: left; }
 .toolbar { display: flex; flex-wrap: wrap; gap: 5px; padding: 10px 14px 0; }
 .toolbar button { min-width: 38px; height: 36px; border: 0; border-radius: 8px; background: var(--chip); font-weight: 700; font-size: 15px; padding: 0 9px; display: inline-flex; align-items: center; justify-content: center; }
@@ -460,6 +463,8 @@ button { cursor: pointer; -webkit-tap-highlight-color: transparent; touch-action
     <div class="group" id="tMargins"><h3>Margens do texto</h3>
       <div class="field"><label>Esquerda</label><div class="mstep"><button data-m="ml" data-d="-0.5" aria-label="Diminuir a margem esquerda">−</button><output id="tMl">0 cm</output><button data-m="ml" data-d="0.5" aria-label="Aumentar a margem esquerda">+</button></div></div>
       <div class="field"><label>Direita</label><div class="mstep"><button data-m="mr" data-d="-0.5" aria-label="Diminuir a margem direita">−</button><output id="tMr">0 cm</output><button data-m="mr" data-d="0.5" aria-label="Aumentar a margem direita">+</button></div></div>
+      <div class="field"><label>Recuo da 1ª linha<small>Espaço no início do parágrafo</small></label><div class="mstep"><button data-m="fi" data-d="-0.5" aria-label="Diminuir o recuo da primeira linha">−</button><output id="tFi">0 cm</output><button data-m="fi" data-d="0.5" aria-label="Aumentar o recuo da primeira linha">+</button></div></div>
+      <div class="field" id="tFiFirstRow" hidden><label for="tFiFirst">Só no primeiro parágrafo</label><input type="checkbox" id="tFiFirst"></div>
     </div>
     <div class="group" id="tPrevWrap"><h3>Prévia</h3><div style="padding: 4px 14px 14px"><div class="preview" id="tPreview"></div></div></div>
     <div class="group" id="tHelp"><h3>Formatação pelo teclado</h3>
@@ -622,19 +627,23 @@ function richHtml(src) {
 }
 // Quebra o texto em linhas para desenhar no PDF. Cada linha: { h, draw(ctx, x, y) }
 const CM = 28.3465;  // pontos por centímetro no PDF
-function fmtOf(t) { t = t || {}; return { align: ['left', 'center', 'right', 'justify'].includes(t.align) ? t.align : 'left', ml: +t.ml || 0, mr: +t.mr || 0 }; }
-function richLines(mc, src, width, size, align) {
+function fmtOf(t) { t = t || {}; return { align: ['left', 'center', 'right', 'justify'].includes(t.align) ? t.align : 'left', ml: +t.ml || 0, mr: +t.mr || 0, fi: +t.fi || 0, fiFirst: !!t.fiFirst }; }
+function richLines(mc, src, width, size, align, fi, fiFirst) {
+  fi = fi || 0; let pCount = 0;
   const lines = [], font = (r, h) => `${r.b || h ? 'bold ' : ''}${r.i ? 'italic ' : ''}${h ? size * 1.18 : size}px Georgia, "Times New Roman", serif`;
   parseRich(src).forEach((p, pi) => {
     if (p.type === 'gap') { lines.push({ h: size * 0.55, draw() {} }); return; }
     const isH = p.type === 'h', indent = p.type === 'li' ? size * 1.5 : 0, lh = (isH ? size * 1.18 : size) * 1.42;
+    const pIndent = p.type === 'p' && fi && (!fiFirst || pCount === 0) ? fi : 0;
+    if (p.type === 'p') pCount++;
     if (isH && pi > 0) lines.push({ h: size * 0.5, draw() {} });
     const words = [];
     p.runs.forEach(r => r.t.split(/(\s+)/).forEach(w => { if (w) words.push({ ...r, t: w }); }));
     let cur = [], x = 0, gap = false;
     const flush = (first, last) => {
       const items = cur, lineW = x, bullet = first && p.type === 'li' ? (p.n ? p.n + '.' : '•') : '';
-      const avail = width - indent, gaps = items.filter(it => it.gap).length;
+      const fiL = first ? pIndent : 0;
+      const avail = width - indent - fiL, gaps = items.filter(it => it.gap).length;
       let off = 0, extra = 0;
       if (align === 'center') off = (avail - lineW) / 2;
       else if (align === 'right') off = avail - lineW;
@@ -643,7 +652,7 @@ function richLines(mc, src, width, size, align) {
         ctx.fillStyle = INK; ctx.textBaseline = 'top'; ctx.textAlign = 'left';
         if (bullet) { ctx.font = font({}, false); ctx.fillText(bullet, x0 + off + (p.n ? 0 : size * 0.45), y); }
         let g = 0;
-        items.forEach(it => { if (it.gap) g++; ctx.font = font(it, isH); ctx.fillText(it.t, x0 + indent + off + it.x + extra * g, y); });
+        items.forEach(it => { if (it.gap) g++; ctx.font = font(it, isH); ctx.fillText(it.t, x0 + indent + fiL + off + it.x + extra * g, y); });
       } });
       cur = []; x = 0; gap = false;
     };
@@ -652,7 +661,7 @@ function richLines(mc, src, width, size, align) {
       mc.font = font(w, isH);
       const ww = mc.measureText(w.t).width;
       if (/^\s+$/.test(w.t)) { if (cur.length) { x += ww; gap = true; } return; }
-      if (cur.length && x - (gap ? mc.measureText(' ').width : 0) + ww > width - indent) {
+      if (cur.length && x - (gap ? mc.measureText(' ').width : 0) + ww > width - indent - (first ? pIndent : 0)) {
         if (gap) x -= mc.measureText(' ').width;
         flush(first, false); first = false;
       }
@@ -1287,7 +1296,7 @@ function docLayout(score) {
   blocks.push({ h: headH, draw: (ctx, y) => drawScoreHeader(ctx, score, P, margin, y) });
   if ((score.intro || '').trim()) {
     const f = fmtOf(score.introFmt), x0 = margin + f.ml * CM, w = Math.max(60, W - (f.ml + f.mr) * CM);
-    richLines(mc, score.intro, w, 10.5, f.align).forEach(l => blocks.push({ h: l.h, draw: (ctx, y) => l.draw(ctx, x0, y) }));
+    richLines(mc, score.intro, w, 10.5, f.align, f.fi * CM, f.fiFirst).forEach(l => blocks.push({ h: l.h, draw: (ctx, y) => l.draw(ctx, x0, y) }));
     blocks.push({ h: 8, spacer: true, draw() {} });
   }
   const systems = layoutSystems(score, W, sp, margin);
@@ -1300,7 +1309,7 @@ function docLayout(score) {
         richLines(mc, '# ' + t.title.trim(), w, 11.5, f.align === 'justify' ? 'left' : f.align).filter(l => l.h > 8)
           .forEach(l => blocks.push({ h: l.h + 2, keep: true, draw: (ctx, y) => l.draw(ctx, x0, y + 1) }));
       }
-      const body = richLines(mc, t.body, w, 10.5, f.align);
+      const body = richLines(mc, t.body, w, 10.5, f.align, f.fi * CM, f.fiFirst);
       body.forEach((l, k) => blocks.push({ h: l.h, keep: k === body.length - 1, draw: (ctx, y) => l.draw(ctx, x0, y) }));
       blocks.push({ h: 2, draw() {} });
     }
@@ -2162,7 +2171,7 @@ function renderScore() {
   $('#pIntro').hidden = !intro; $('#introAdd').hidden = !!intro;
   const host = $('#systems');
   const pxCm = (host.clientWidth || 360) / (paperSize(sc.paper).w / CM);
-  const styleText = (el, t, base) => { const f = fmtOf(t); el.style.textAlign = f.align; el.style.paddingLeft = (base + f.ml * pxCm) + 'px'; el.style.paddingRight = (base + f.mr * pxCm) + 'px'; };
+  const styleText = (el, t, base) => { const f = fmtOf(t); el.style.textAlign = f.align; el.style.paddingLeft = (base + f.ml * pxCm) + 'px'; el.style.paddingRight = (base + f.mr * pxCm) + 'px'; el.style.setProperty('--fi', (f.fi * pxCm) + 'px'); el.classList.toggle('fi-first', f.fiFirst); };
   styleText($('#pIntro'), sc.introFmt, 4);
   const W = host.clientWidth || 360;
   const sp = Math.max(5.2, Math.min(9, W / 50, window.innerHeight / 52)) * ZOOMS[S.zoom], margin = W < 520 ? 12 : 10;
@@ -2251,8 +2260,10 @@ function updatePreview() {
   pv.innerHTML = `<div class="rt pv">${title ? `<div class="rt-title">${escHtml(title)}</div>` : ''}${richHtml(body)}</div>`;
   const inner = pv.firstChild, pxCm = (pv.clientWidth || 320) / (paperSize(S.score.paper).w / CM);
   inner.style.textAlign = tFmt.align; inner.style.paddingLeft = (14 + tFmt.ml * pxCm) + 'px'; inner.style.paddingRight = (14 + tFmt.mr * pxCm) + 'px';
+  inner.style.setProperty('--fi', (tFmt.fi * pxCm) + 'px'); inner.classList.toggle('fi-first', tFmt.fiFirst);
   document.querySelectorAll('#tTools [data-align]').forEach(b => b.classList.toggle('on', b.dataset.align === tFmt.align));
   $('#tMl').textContent = String(tFmt.ml).replace('.', ',') + ' cm'; $('#tMr').textContent = String(tFmt.mr).replace('.', ',') + ' cm';
+  $('#tFi').textContent = String(tFmt.fi).replace('.', ',') + ' cm'; $('#tFiFirst').checked = tFmt.fiFirst; $('#tFiFirstRow').hidden = !tFmt.fi;
 }
 function fmtText(kind) {
   const ta = $('#tBody'), v = ta.value, a = ta.selectionStart, b = ta.selectionEnd;
@@ -2284,7 +2295,9 @@ $('#tTools').addEventListener('click', e => {
 });
 $('#tMargins').addEventListener('click', e => {
   const b = e.target.closest('button[data-m]'); if (!b) return;
-  tFmt[b.dataset.m] = Math.max(0, Math.min(6, tFmt[b.dataset.m] + +b.dataset.d)); updatePreview();
+  tFmt[b.dataset.m] = Math.max(0, Math.min(b.dataset.m === 'fi' ? 3 : 6, tFmt[b.dataset.m] + +b.dataset.d)); updatePreview();
+});
+$('#tFiFirst').addEventListener('change', e => { tFmt.fiFirst = e.target.checked; updatePreview();
 });
 $('#tBody').addEventListener('input', updatePreview);
 $('#tTitle').addEventListener('input', updatePreview);
@@ -2325,7 +2338,7 @@ function openText(o) {
 function saveText(remove) {
   const o = textCtx; if (!o) return;
   const title = remove ? '' : $('#tTitle').value.trim(), body = remove ? '' : $('#tBody').value.replace(/\s+$/, ''), newPage = !remove && $('#tNewPage').checked;
-  const tb = (title || body.trim()) ? { title, body, newPage, align: tFmt.align, ml: tFmt.ml, mr: tFmt.mr } : null;
+  const tb = (title || body.trim()) ? { title, body, newPage, align: tFmt.align, ml: tFmt.ml, mr: tFmt.mr, fi: tFmt.fi, fiFirst: tFmt.fiFirst } : null;
   if (!remove && o.mode !== 'note') S.lastFmt = { ...tFmt };
   if (o.mode === 'intro') edit(s => { s.intro = body; s.introFmt = remove ? null : { ...tFmt }; });
   else if (o.mode === 'block') edit(s => { s.measures[o.m].textBefore = tb; });
