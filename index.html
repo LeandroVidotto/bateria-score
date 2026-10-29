@@ -683,26 +683,28 @@ function layoutSystems(score, width, sp, originX) {
     const leading = sp * 1.2 + timeW + (m.repeatStart ? sp * 1.6 : 0);
     const evs = visibleEvents(m);
     const widths = evs.map(e => natW(e, sp));
-    const content = evs.length ? Math.max(widths.reduce((a, b) => a + b, 0), m.label ? m.label.length * sp * 0.95 : 0) : sp * 10;
+    // o tempo que falta no compasso também reserva espaço (como se fossem semínimas/tempos),
+    // assim um compasso vazio ou pela metade ocupa o mesmo lugar que um compasso cheio
+    const beat = beamGroupLengths(m.time)[0], beatW = sp * (1.1 + 5 * Math.sqrt(fval(beat)));
+    const rem = m.simile ? cap(m.time) : remaining(m);
+    const remW = fcmp(rem, ZERO) > 0 ? (fval(rem) / fval(beat)) * beatW : 0;
+    const content = Math.max(widths.reduce((a, b) => a + b, 0) + remW, sp * 4);
     const trailing = sp * 0.8 + ((m.repeatEnd || i === ms.length - 1) ? sp * 1.6 : 0);
-    return { leading, widths, content, trailing, showTime, timeW, total: leading + content + trailing };
+    return { leading, widths, content, trailing, showTime, timeW };
   });
-  const clefW = sp * 3.6;
+  const clefW = sp * 3.6, avail = width - clefW;
+  // Todos os compassos têm a mesma largura: cabe na linha o número que o compasso mais cheio permite
+  const need = Math.max(...infos.map(inf => inf.leading + inf.content * 0.8 + inf.trailing), sp * 8);
+  const perLine = score.perLine > 0 ? score.perLine : Math.max(1, Math.floor(avail / need));
+  const mw = avail / perLine;
   const lines = [];
-  let cur = [], w = clefW;
+  let cur = [];
   infos.forEach((inf, i) => {
-    const brk = cur.length && (hasText(ms[i].textBefore) || (score.perLine > 0 ? cur.length >= score.perLine : w + inf.total > width));
-    if (brk) { lines.push(cur); cur = []; w = clefW; }
-    cur.push(i); w += inf.total;
+    if (cur.length && (hasText(ms[i].textBefore) || cur.length >= perLine)) { lines.push(cur); cur = []; }
+    cur.push(i);
   });
   if (cur.length) lines.push(cur);
-  return lines.map((line, li) => {
-    const natural = clefW + line.reduce((a, i) => a + infos[i].total, 0);
-    const contentSum = Math.max(1, line.reduce((a, i) => a + infos[i].content, 0));
-    let extra = width - natural;
-    const endsSection = li === lines.length - 1 || hasText(ms[lines[li + 1][0]].textBefore);
-    if (extra > 0 && endsSection && natural < width * 0.6) extra = 0;
-    const factor = Math.max(0.5, (contentSum + extra) / contentSum);
+  return lines.map(line => {
     let x = originX + clefW;
     let hasAcc = false, hasTup = false, hasStk = false, hasDyn = false, hasLabel = false, hasVolta = false, hasTimes = false, hasNoteText = false;
     const measures = line.map(i => {
@@ -712,6 +714,7 @@ function layoutSystems(score, width, sp, originX) {
       if (m.repeatEnd && (m.repeatTimes || 2) > 2) hasTimes = true;
       const timeX = x0 + (m.repeatStart ? sp * 1.6 : 0) + sp * 0.5 + inf.timeW / 2;
       const contentX = x0 + inf.leading;
+      const contentW = Math.max(sp * 2, mw - inf.leading - inf.trailing), factor = contentW / inf.content;
       let ex = contentX;
       const events = visibleEvents(m).map((e, k) => {
         const w = inf.widths[k] * factor;
@@ -724,8 +727,8 @@ function layoutSystems(score, width, sp, originX) {
         if (e.text) hasNoteText = true;
         return le;
       });
-      const contentEnd = contentX + inf.content * factor;
-      const x1 = contentEnd + inf.trailing;
+      const contentEnd = contentX + contentW;
+      const x1 = x0 + mw;
       x = x1;
       return { index: i, x0, x1, showTime: inf.showTime, timeX, contentX, contentEnd, events };
     });
