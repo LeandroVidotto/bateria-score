@@ -103,7 +103,20 @@ button { cursor: pointer; -webkit-tap-highlight-color: transparent; touch-action
 .rt .rt-li[data-n]::before { content: attr(data-n) "."; left: 0; font-variant-numeric: tabular-nums; }
 .rt .rt-gap { height: 6px; }
 .rt .rt-title { font-weight: 700; font-size: 17px; margin: 0 0 4px; }
-.intro { padding: 10px 4px 0; max-width: 68ch; margin: 0 auto; }
+.intro { padding-top: 10px; }
+.rt { hyphens: auto; -webkit-hyphens: auto; }
+.rt[style*="justify"] .rt-h, .rt[style*="justify"] .rt-title { text-align: left; }
+.toolbar { display: flex; flex-wrap: wrap; gap: 5px; padding: 10px 14px 0; }
+.toolbar button { min-width: 38px; height: 36px; border: 0; border-radius: 8px; background: var(--chip); font-weight: 700; font-size: 15px; padding: 0 9px; display: inline-flex; align-items: center; justify-content: center; }
+.toolbar button.on { background: var(--accent); color: var(--accent-fg); }
+.toolbar button svg { width: 20px; height: 20px; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; }
+.toolbar .tsep { width: 1px; background: var(--line); margin: 4px 2px; }
+.preview { background: #fff; border: 1px solid var(--line); border-radius: 10px; padding: 14px 0; min-height: 60px; overflow: hidden; }
+.preview .pv { padding: 0; }
+.preview .empty-pv { color: #8a93a3; font-family: var(--ui); font-size: 13.5px; padding: 0 14px; }
+.mstep { display: flex; align-items: center; gap: 6px; }
+.mstep button { width: 36px; height: 36px; border: 0; border-radius: 8px; background: var(--chip); font-size: 18px; font-weight: 700; }
+.mstep output { min-width: 58px; text-align: center; font-weight: 700; font-variant-numeric: tabular-nums; }
 .tblock { padding: 14px 14px 2px; cursor: pointer; border-radius: 6px; max-width: 72ch; }
 .tblock:hover, .intro:hover { background: rgba(29,76,204,0.05); }
 .tblock .pg { display: inline-block; font-family: var(--ui); font-size: 11.5px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: #5b6372; border: 1px solid #d3d8e1; border-radius: 4px; padding: 1px 6px; margin-bottom: 6px; }
@@ -384,6 +397,7 @@ button { cursor: pointer; -webkit-tap-highlight-color: transparent; touch-action
     <div class="group"><h3>Manulação e impressão</h3>
       <div class="field"><label for="fStick">Letras da manulação</label><select id="fStick"><option value="rl">R / L</option><option value="de">D / E</option></select></div>
       <div class="field"><label for="fPerLine">Compassos por linha</label><select id="fPerLine"><option value="0">Automático</option><option>1</option><option>2</option><option>3</option><option>4</option><option>5</option><option>6</option><option>8</option></select></div>
+      <div class="field"><label for="fMargin">Margens da página</label><select id="fMargin"><option value="1">Estreita (1 cm)</option><option value="1.4">Normal (1,4 cm)</option><option value="2">Média (2 cm)</option><option value="2.5">Larga (2,5 cm)</option><option value="3">Extra larga (3 cm)</option></select></div>
       <div class="field"><label for="fPaper">Papel</label><select id="fPaper"><option value="a4">A4</option><option value="letter">Carta (Letter)</option></select></div>
     </div>
     <div class="group"><h3>Legenda dos instrumentos</h3><div class="legend" id="legend"></div></div>
@@ -428,10 +442,27 @@ button { cursor: pointer; -webkit-tap-highlight-color: transparent; touch-action
     <p class="hint" id="tWhere"></p>
     <div class="group">
       <div class="field" id="tTitleRow"><label for="tTitle" id="tTitleLabel">Título</label><input type="text" id="tTitle" maxlength="80"></div>
+      <div id="tTools" class="toolbar" role="toolbar" aria-label="Formatação">
+        <button data-fmt="b" aria-label="Negrito" title="Negrito"><b>B</b></button>
+        <button data-fmt="i" aria-label="Itálico" title="Itálico"><i style="font-family:Georgia,serif">I</i></button>
+        <button data-fmt="h" aria-label="Título da seção" title="Título da seção">T</button>
+        <button data-fmt="ul" aria-label="Lista com marcadores" title="Lista"><svg viewBox="0 0 24 24"><path d="M9 6h11M9 12h11M9 18h11"/><circle cx="4.5" cy="6" r="1" fill="currentColor"/><circle cx="4.5" cy="12" r="1" fill="currentColor"/><circle cx="4.5" cy="18" r="1" fill="currentColor"/></svg></button>
+        <button data-fmt="ol" aria-label="Lista numerada" title="Lista numerada">1.</button>
+        <span class="tsep"></span>
+        <button data-align="left" aria-label="Alinhar à esquerda" title="Alinhar à esquerda"><svg viewBox="0 0 24 24"><path d="M4 6h16M4 10h10M4 14h16M4 18h10"/></svg></button>
+        <button data-align="center" aria-label="Centralizar" title="Centralizar"><svg viewBox="0 0 24 24"><path d="M4 6h16M7 10h10M4 14h16M7 18h10"/></svg></button>
+        <button data-align="right" aria-label="Alinhar à direita" title="Alinhar à direita"><svg viewBox="0 0 24 24"><path d="M4 6h16M10 10h10M4 14h16M10 18h10"/></svg></button>
+        <button data-align="justify" aria-label="Justificar" title="Justificar"><svg viewBox="0 0 24 24"><path d="M4 6h16M4 10h16M4 14h16M4 18h16"/></svg></button>
+      </div>
       <div class="field area" id="tBodyRow"><textarea id="tBody" rows="9" placeholder="Escreva aqui a explicação, as instruções do exercício ou suas observações."></textarea></div>
       <div class="field" id="tPageRow"><label for="tNewPage">Começar numa página nova no PDF</label><input type="checkbox" id="tNewPage"></div>
     </div>
-    <div class="group" id="tHelp"><h3>Formatação</h3>
+    <div class="group" id="tMargins"><h3>Margens do texto</h3>
+      <div class="field"><label>Esquerda</label><div class="mstep"><button data-m="ml" data-d="-0.5" aria-label="Diminuir a margem esquerda">−</button><output id="tMl">0 cm</output><button data-m="ml" data-d="0.5" aria-label="Aumentar a margem esquerda">+</button></div></div>
+      <div class="field"><label>Direita</label><div class="mstep"><button data-m="mr" data-d="-0.5" aria-label="Diminuir a margem direita">−</button><output id="tMr">0 cm</output><button data-m="mr" data-d="0.5" aria-label="Aumentar a margem direita">+</button></div></div>
+    </div>
+    <div class="group" id="tPrevWrap"><h3>Prévia</h3><div style="padding: 4px 14px 14px"><div class="preview" id="tPreview"></div></div></div>
+    <div class="group" id="tHelp"><h3>Formatação pelo teclado</h3>
       <div class="legend">
         <span># Título da seção</span><span>linha de título</span>
         <span>- item</span><span>lista com marcadores</span>
@@ -590,7 +621,9 @@ function richHtml(src) {
     : `<p>${rh(p.runs)}</p>`).join('');
 }
 // Quebra o texto em linhas para desenhar no PDF. Cada linha: { h, draw(ctx, x, y) }
-function richLines(mc, src, width, size) {
+const CM = 28.3465;  // pontos por centímetro no PDF
+function fmtOf(t) { t = t || {}; return { align: ['left', 'center', 'right', 'justify'].includes(t.align) ? t.align : 'left', ml: +t.ml || 0, mr: +t.mr || 0 }; }
+function richLines(mc, src, width, size, align) {
   const lines = [], font = (r, h) => `${r.b || h ? 'bold ' : ''}${r.i ? 'italic ' : ''}${h ? size * 1.18 : size}px Georgia, "Times New Roman", serif`;
   parseRich(src).forEach((p, pi) => {
     if (p.type === 'gap') { lines.push({ h: size * 0.55, draw() {} }); return; }
@@ -598,25 +631,34 @@ function richLines(mc, src, width, size) {
     if (isH && pi > 0) lines.push({ h: size * 0.5, draw() {} });
     const words = [];
     p.runs.forEach(r => r.t.split(/(\s+)/).forEach(w => { if (w) words.push({ ...r, t: w }); }));
-    let cur = [], x = 0;
-    const flush = (first) => {
-      const items = cur, bullet = first && p.type === 'li' ? (p.n ? p.n + '.' : '•') : '';
+    let cur = [], x = 0, gap = false;
+    const flush = (first, last) => {
+      const items = cur, lineW = x, bullet = first && p.type === 'li' ? (p.n ? p.n + '.' : '•') : '';
+      const avail = width - indent, gaps = items.filter(it => it.gap).length;
+      let off = 0, extra = 0;
+      if (align === 'center') off = (avail - lineW) / 2;
+      else if (align === 'right') off = avail - lineW;
+      else if (align === 'justify' && !last && !isH && gaps) extra = (avail - lineW) / gaps;
       lines.push({ h: lh, draw(ctx, x0, y) {
         ctx.fillStyle = INK; ctx.textBaseline = 'top'; ctx.textAlign = 'left';
-        if (bullet) { ctx.font = font({}, false); ctx.fillText(bullet, x0 + (p.n ? 0 : size * 0.45), y); }
-        items.forEach(it => { ctx.font = font(it, isH); ctx.fillText(it.t, x0 + indent + it.x, y); });
+        if (bullet) { ctx.font = font({}, false); ctx.fillText(bullet, x0 + off + (p.n ? 0 : size * 0.45), y); }
+        let g = 0;
+        items.forEach(it => { if (it.gap) g++; ctx.font = font(it, isH); ctx.fillText(it.t, x0 + indent + off + it.x + extra * g, y); });
       } });
-      cur = []; x = 0;
+      cur = []; x = 0; gap = false;
     };
     let first = true;
     words.forEach(w => {
       mc.font = font(w, isH);
       const ww = mc.measureText(w.t).width;
-      if (/^\s+$/.test(w.t)) { if (cur.length) { x += ww; } return; }
-      if (cur.length && x + ww > width - indent) { flush(first); first = false; }
-      cur.push({ ...w, x }); x += ww;
+      if (/^\s+$/.test(w.t)) { if (cur.length) { x += ww; gap = true; } return; }
+      if (cur.length && x - (gap ? mc.measureText(' ').width : 0) + ww > width - indent) {
+        if (gap) x -= mc.measureText(' ').width;
+        flush(first, false); first = false;
+      }
+      cur.push({ ...w, x, gap: cur.length > 0 && gap }); x += ww; gap = false;
     });
-    if (cur.length) flush(first);
+    if (cur.length) flush(first, true);
     lines.push({ h: size * 0.3, draw() {} });
   });
   return lines;
@@ -1239,12 +1281,13 @@ function drawScoreHeader(ctx, score, P, margin, y0) {
 }
 // Monta a partitura como uma sequência de blocos (cabeçalho, linhas de texto, pautas) e divide em páginas
 function docLayout(score) {
-  const P = paperSize(score.paper), margin = 40, sp = 5.2, footer = 24, W = P.w - 2 * margin, mc = measureCtx();
+  const P = paperSize(score.paper), margin = (score.pageMargin || 1.4) * CM, sp = 5.2, footer = 24, W = P.w - 2 * margin, mc = measureCtx();
   const blocks = [];
   const headH = 32 + (score.subtitle ? 18 : 0) + 26;
   blocks.push({ h: headH, draw: (ctx, y) => drawScoreHeader(ctx, score, P, margin, y) });
   if ((score.intro || '').trim()) {
-    richLines(mc, score.intro, W, 10.5).forEach(l => blocks.push({ h: l.h, draw: (ctx, y) => l.draw(ctx, margin, y) }));
+    const f = fmtOf(score.introFmt), x0 = margin + f.ml * CM, w = Math.max(60, W - (f.ml + f.mr) * CM);
+    richLines(mc, score.intro, w, 10.5, f.align).forEach(l => blocks.push({ h: l.h, draw: (ctx, y) => l.draw(ctx, x0, y) }));
     blocks.push({ h: 8, spacer: true, draw() {} });
   }
   const systems = layoutSystems(score, W, sp, margin);
@@ -1252,11 +1295,13 @@ function docLayout(score) {
     if (hasText(sy.textBefore)) {
       const t = sy.textBefore;
       blocks.push({ h: si === 0 ? 4 : 12, spacer: true, brk: !!t.newPage && si > 0, draw() {} });
+      const f = fmtOf(t), x0 = margin + f.ml * CM, w = Math.max(60, W - (f.ml + f.mr) * CM);
       if (t.title && t.title.trim()) {
-        blocks.push({ h: 20, keep: true, draw: (ctx, y) => { ctx.fillStyle = INK; ctx.textAlign = 'left'; ctx.textBaseline = 'top'; ctx.font = 'bold 13.5px Georgia, "Times New Roman", serif'; ctx.fillText(t.title.trim(), margin, y + 2); } });
+        richLines(mc, '# ' + t.title.trim(), w, 11.5, f.align === 'justify' ? 'left' : f.align).filter(l => l.h > 8)
+          .forEach(l => blocks.push({ h: l.h + 2, keep: true, draw: (ctx, y) => l.draw(ctx, x0, y + 1) }));
       }
-      const body = richLines(mc, t.body, W, 10.5);
-      body.forEach((l, k) => blocks.push({ h: l.h, keep: k === body.length - 1, draw: (ctx, y) => l.draw(ctx, margin, y) }));
+      const body = richLines(mc, t.body, w, 10.5, f.align);
+      body.forEach((l, k) => blocks.push({ h: l.h, keep: k === body.length - 1, draw: (ctx, y) => l.draw(ctx, x0, y) }));
       blocks.push({ h: 2, draw() {} });
     }
     blocks.push({ h: sy.height + sp * 1.5, draw: (ctx, y) => { sy.y = y + sy.topPad; drawSystem(ctx, score, sy, { isFirst: si === 0 }); } });
@@ -2116,6 +2161,9 @@ function renderScore() {
   if ($('#pIntro').dataset.key !== intro) { $('#pIntro').dataset.key = intro; $('#pIntro').innerHTML = richHtml(intro); }
   $('#pIntro').hidden = !intro; $('#introAdd').hidden = !!intro;
   const host = $('#systems');
+  const pxCm = (host.clientWidth || 360) / (paperSize(sc.paper).w / CM);
+  const styleText = (el, t, base) => { const f = fmtOf(t); el.style.textAlign = f.align; el.style.paddingLeft = (base + f.ml * pxCm) + 'px'; el.style.paddingRight = (base + f.mr * pxCm) + 'px'; };
+  styleText($('#pIntro'), sc.introFmt, 4);
   const W = host.clientWidth || 360;
   const sp = Math.max(5.2, Math.min(9, W / 50, window.innerHeight / 52)) * ZOOMS[S.zoom], margin = W < 520 ? 12 : 10;
   const dpr = Math.min(3, window.devicePixelRatio || 1);
@@ -2132,6 +2180,7 @@ function renderScore() {
     }
     const tb = w.firstChild, c = w.lastChild;
     c.dataset.idx = i; tb.dataset.m = s.firstMeasure;
+    styleText(tb, s.textBefore, 14);
     const key = hasText(s.textBefore) ? JSON.stringify(s.textBefore) : '';
     if (tb.dataset.key !== key) {
       tb.dataset.key = key; tb.hidden = !key;
@@ -2193,6 +2242,52 @@ $('#systems').addEventListener('keydown', e => { const tb = e.target.closest('.t
 
 /* ---------- Textos e anotações ---------- */
 let textCtx = null;
+let tFmt = { align: 'left', ml: 0, mr: 0 };
+function updatePreview() {
+  if (!textCtx || textCtx.mode === 'note') return;
+  const title = textCtx.mode === 'intro' ? '' : $('#tTitle').value.trim(), body = $('#tBody').value;
+  const pv = $('#tPreview');
+  if (!title && !body.trim()) { pv.innerHTML = '<div class="empty-pv">A prévia aparece aqui enquanto você escreve.</div>'; return; }
+  pv.innerHTML = `<div class="rt pv">${title ? `<div class="rt-title">${escHtml(title)}</div>` : ''}${richHtml(body)}</div>`;
+  const inner = pv.firstChild, pxCm = (pv.clientWidth || 320) / (paperSize(S.score.paper).w / CM);
+  inner.style.textAlign = tFmt.align; inner.style.paddingLeft = (14 + tFmt.ml * pxCm) + 'px'; inner.style.paddingRight = (14 + tFmt.mr * pxCm) + 'px';
+  document.querySelectorAll('#tTools [data-align]').forEach(b => b.classList.toggle('on', b.dataset.align === tFmt.align));
+  $('#tMl').textContent = String(tFmt.ml).replace('.', ',') + ' cm'; $('#tMr').textContent = String(tFmt.mr).replace('.', ',') + ' cm';
+}
+function fmtText(kind) {
+  const ta = $('#tBody'), v = ta.value, a = ta.selectionStart, b = ta.selectionEnd;
+  if (kind === 'b' || kind === 'i') {
+    const mk = kind === 'b' ? '**' : '*', sel = v.slice(a, b) || (kind === 'b' ? 'negrito' : 'itálico');
+    ta.value = v.slice(0, a) + mk + sel + mk + v.slice(b);
+    ta.setSelectionRange(a + mk.length, a + mk.length + sel.length);
+  } else {
+    const ls = v.lastIndexOf('\n', a - 1) + 1, leRaw = v.indexOf('\n', b), le = leRaw < 0 ? v.length : leRaw;
+    const lines = v.slice(ls, le).split('\n');
+    const re = kind === 'h' ? /^#{1,3}\s+/ : kind === 'ul' ? /^[-•*]\s+/ : /^\d+[.)]\s+/;
+    const allHave = lines.every(l => re.test(l));
+    let n = 0;
+    const out = lines.map(l => {
+      const clean = l.replace(/^(#{1,3}|[-•*]|\d+[.)])\s+/, '');
+      if (allHave) return clean;
+      return (kind === 'h' ? '# ' : kind === 'ul' ? '- ' : (++n) + '. ') + clean;
+    }).join('\n');
+    ta.value = v.slice(0, ls) + out + v.slice(le);
+    ta.setSelectionRange(ls, ls + out.length);
+  }
+  ta.focus(); updatePreview();
+}
+$('#tTools').addEventListener('pointerdown', e => { if (e.target.closest('button')) e.preventDefault(); });
+$('#tTools').addEventListener('click', e => {
+  const b = e.target.closest('button'); if (!b) return;
+  if (b.dataset.fmt) fmtText(b.dataset.fmt);
+  else if (b.dataset.align) { tFmt.align = b.dataset.align; updatePreview(); }
+});
+$('#tMargins').addEventListener('click', e => {
+  const b = e.target.closest('button[data-m]'); if (!b) return;
+  tFmt[b.dataset.m] = Math.max(0, Math.min(6, tFmt[b.dataset.m] + +b.dataset.d)); updatePreview();
+});
+$('#tBody').addEventListener('input', updatePreview);
+$('#tTitle').addEventListener('input', updatePreview);
 function openText(o) {
   textCtx = o;
   const sc = S.score;
@@ -2218,6 +2313,9 @@ function openText(o) {
   show('#tTitleRow', o.mode !== 'intro'); show('#tBodyRow', o.mode !== 'note'); show('#tPageRow', o.mode === 'block' || o.mode === 'end');
   show('#tHelp', o.mode !== 'note');
   $('#tTitle').value = title; $('#tBody').value = body; $('#tNewPage').checked = newPage;
+  tFmt = fmtOf(o.mode === 'intro' ? sc.introFmt : o.mode === 'block' ? sc.measures[o.m].textBefore : (o.mode === 'end' ? S.lastFmt : null));
+  show('#tTools', o.mode !== 'note'); show('#tMargins', o.mode !== 'note'); show('#tPrevWrap', o.mode !== 'note');
+  updatePreview();
   const has = o.mode === 'intro' ? !!(sc.intro || '').trim() : o.mode === 'block' ? hasText(sc.measures[o.m].textBefore) : o.mode === 'note' ? !!title : false;
   $('#tRemove').hidden = !has;
   $('#tRemove').textContent = o.mode === 'note' ? 'Remover a anotação' : 'Remover este texto';
@@ -2227,8 +2325,9 @@ function openText(o) {
 function saveText(remove) {
   const o = textCtx; if (!o) return;
   const title = remove ? '' : $('#tTitle').value.trim(), body = remove ? '' : $('#tBody').value.replace(/\s+$/, ''), newPage = !remove && $('#tNewPage').checked;
-  const tb = (title || body.trim()) ? { title, body, newPage } : null;
-  if (o.mode === 'intro') edit(s => { s.intro = body; });
+  const tb = (title || body.trim()) ? { title, body, newPage, align: tFmt.align, ml: tFmt.ml, mr: tFmt.mr } : null;
+  if (!remove && o.mode !== 'note') S.lastFmt = { ...tFmt };
+  if (o.mode === 'intro') edit(s => { s.intro = body; s.introFmt = remove ? null : { ...tFmt }; });
   else if (o.mode === 'block') edit(s => { s.measures[o.m].textBefore = tb; });
   else if (o.mode === 'end') {
     if (tb) {
@@ -2340,6 +2439,7 @@ function openInfo() {
   $('#fMetro').checked = !!pb.metro; $('#fCount').checked = !!pb.countIn; $('#fLoop').checked = !!pb.loop;
   $('#fHuman').checked = prefs.human !== false; $('#fRoom').checked = prefs.room !== false;
   $('#fStick').value = s.sticking; $('#fPerLine').value = String(s.perLine); $('#fPaper').value = s.paper;
+  $('#fMargin').value = String(s.pageMargin || 1.4);
   openSheet('#infoSheet');
 }
 $('#titleBtn').onclick = openInfo;
@@ -2353,7 +2453,7 @@ $('#infoSave').onclick = () => {
     s.tempo = $('#fTempoOn').checked ? bpm : 0;
     s.playBpm = bpm;
     s.playback = { metro: $('#fMetro').checked, countIn: $('#fCount').checked, loop: $('#fLoop').checked };
-    s.sticking = $('#fStick').value; s.perLine = parseInt($('#fPerLine').value, 10) || 0; s.paper = $('#fPaper').value;
+    s.sticking = $('#fStick').value; s.perLine = parseInt($('#fPerLine').value, 10) || 0; s.paper = $('#fPaper').value; s.pageMargin = parseFloat($('#fMargin').value) || 1.4;
   });
   prefs.human = $('#fHuman').checked; prefs.room = $('#fRoom').checked; savePrefs();
   $('#infoSheet').hidden = true; render();
