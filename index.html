@@ -159,8 +159,14 @@ button { cursor: pointer; -webkit-tap-highlight-color: transparent; touch-action
 .pad { height: 36px; border: 0; border-radius: 9px; font-weight: 600; font-size: clamp(11px, 3vw, 13.5px); letter-spacing: -0.01em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding: 0 2px; background: color-mix(in srgb, var(--c) 17%, transparent); box-shadow: inset 0 0 0 2px transparent; }
 .pad:active { background: color-mix(in srgb, var(--c) 35%, transparent); }
 .pad.in { background: color-mix(in srgb, var(--c) 45%, transparent); box-shadow: inset 0 0 0 2px var(--c); }
+.single { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 6px; }
+.single .big { grid-column: 1 / -1; height: 64px; font-size: 18px; font-weight: 700; }
+.single .rest1 { --c: var(--muted); height: 44px; }
+.single .pick { display: flex; flex-direction: column; justify-content: center; gap: 2px; font-size: 11.5px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; }
+.single .pick select { height: 34px; border: 1px solid var(--line); border-radius: 8px; background: var(--bg); font-size: 15px; font-weight: 600; text-transform: none; letter-spacing: 0; color: var(--fg); padding: 0 6px; }
 .pad.cym { --c: var(--cym); } .pad.drum { --c: var(--drum); } .pad.foot { --c: var(--foot); }
-.pad.rest { --c: var(--muted); grid-column: span 5; }
+.pad.rest { --c: var(--muted); grid-column: span 2; }
+.pad[data-inst="cowbell"], .pad[data-inst="cowbellFoot"] { grid-column: span 2; }
 
 .sect { font-size: 11.5px; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); font-weight: 700; padding-top: 2px; }
 .opt { display: grid; grid-template-columns: 74px minmax(0, 1fr); gap: 6px; align-items: start; }
@@ -204,7 +210,8 @@ button { cursor: pointer; -webkit-tap-highlight-color: transparent; touch-action
   #palette .pal { padding-left: 12px; padding-right: max(12px, env(safe-area-inset-right, 0px)); }
   .tabpanel { height: auto; overflow: visible; }
   .pads { grid-template-columns: repeat(4, minmax(0, 1fr)); }
-  .pad.rest { grid-column: span 1; }
+  .pad.rest { grid-column: span 4; }
+  .pad[data-inst="cowbell"], .pad[data-inst="cowbellFoot"] { grid-column: span 1; }
   #desk > .gut.paperwrap { padding-left: max(12px, env(safe-area-inset-left, 0px)); padding-right: 12px; }
 }
 
@@ -313,6 +320,11 @@ button { cursor: pointer; -webkit-tap-highlight-color: transparent; touch-action
       <div class="tabpanel" id="p-notes" role="tabpanel">
         <div class="values" id="rowValues"></div>
         <div class="pads" id="pads"></div>
+        <div class="single" id="singlePads" hidden>
+          <button class="pad big" id="singleNote"></button>
+          <button class="pad rest1" id="singleRest">Pausa</button>
+          <label class="pick"><span>Instrumento</span><select id="singleInst" aria-label="Instrumento da pauta"></select></label>
+        </div>
       </div>
 
       <div class="tabpanel" id="p-art" role="tabpanel" hidden>
@@ -396,6 +408,10 @@ button { cursor: pointer; -webkit-tap-highlight-color: transparent; touch-action
       <div class="field"><label for="fLoop">Repetir sem parar</label><input type="checkbox" id="fLoop"></div>
       <div class="field"><label for="fHuman">Variação humana<small>Pequenas diferenças de tempo e força, como um baterista de verdade</small></label><input type="checkbox" id="fHuman"></div>
       <div class="field"><label for="fRoom">Ambiência de sala</label><input type="checkbox" id="fRoom"></div>
+    </div>
+    <div class="group"><h3>Pauta</h3>
+      <div class="field"><label for="fStaff">Tipo de pauta</label><select id="fStaff"><option value="kit">Bateria completa (5 linhas)</option><option value="single">Um instrumento (1 linha)</option></select></div>
+      <div class="field" id="fStaffInstRow"><label for="fStaffInst">Instrumento<small>As notas já escritas passam a ser deste instrumento</small></label><select id="fStaffInst"></select></div>
     </div>
     <div class="group"><h3>Manulação e impressão</h3>
       <div class="field"><label for="fStick">Letras da manulação</label><select id="fStick"><option value="rl">R / L</option><option value="de">D / E</option></select></div>
@@ -557,6 +573,7 @@ const INST = {
   splash:     { name: 'Splash',              short: 'Splash',     step: 11, head: 'x',     cat: 'cym' },
   china:      { name: 'China',               short: 'China',      step: 11, head: 'cx',    cat: 'cym' },
   cowbell:    { name: 'Cowbell',             short: 'Cowbell',    step: 7,  head: 'tri',   cat: 'cym' },
+  cowbellFoot:{ name: 'Cowbell com o pé esquerdo', short: 'Cowbell pé', step: -2, head: 'tri', cat: 'foot' },
   tom1:       { name: 'Tom 1',               short: 'Tom 1',      step: 7,  head: 'n',     cat: 'drum' },
   tom2:       { name: 'Tom 2',               short: 'Tom 2',      step: 6,  head: 'n',     cat: 'drum' },
   tom3:       { name: 'Tom 3',               short: 'Tom 3',      step: 4,  head: 'n',     cat: 'drum' },
@@ -570,7 +587,7 @@ const INST = {
 const PAD_ORDER = ['hiHat', 'snare', 'bass', 'tom1', 'tom2', 'floorTom',
                    'hiHatOpen', 'hiHatHalf', 'hiHatPedal', 'ride', 'rideBell', 'crash',
                    'tom3', 'floorTom2', 'rimshot', 'crossStick', 'china', 'splash',
-                   'cowbell'];
+                   'cowbell', 'cowbellFoot'];
 const isFoot = k => INST[k].cat === 'foot';
 const isCymbal = k => ['hiHat', 'hiHatOpen', 'hiHatHalf', 'ride', 'rideBell', 'crash', 'splash', 'china'].includes(k);
 const DYN = { pp: 'pp', p: 'p', mp: 'mp', mf: 'mf', f: 'f', ff: 'ff', sfz: 'sfz', cresc: 'cresc.', dim: 'dim.' };
@@ -806,6 +823,9 @@ const INK = '#111111', PAPER = '#ffffff';
 function drawSystem(ctx, score, s, o) {
   o = o || {};
   const sp = s.sp, top = s.y, hw = sp * 1.3, stemW = Math.max(0.6, sp * 0.13), lineW = Math.max(0.5, sp * 0.1);
+  const single = !!(score.staff && score.staff.type === 'single');
+  const stepOf = inst => single ? 4 : INST[inst].step;      // pauta de uma linha: tudo na linha
+  const bT = single ? top + sp : top, bH = single ? 2 * sp : 4 * sp;   // altura das barras de compasso
   const Y = st => top + 4 * sp - st * sp / 2;
   const TAU = Math.PI * 2;
   const placed = {};   // "m:i" -> { headX, notes:[{inst,x,y}] } para as ligaduras
@@ -814,12 +834,14 @@ function drawSystem(ctx, score, s, o) {
   if (o.editor || o.playing) s.measures.forEach(editorBg);
   ink();
   ctx.lineWidth = lineW; ctx.beginPath();
-  for (let i = 0; i < 5; i++) { ctx.moveTo(s.x0, top + i * sp); ctx.lineTo(s.x1, top + i * sp); }
+  if (single) { ctx.moveTo(s.x0, top + 2 * sp); ctx.lineTo(s.x1, top + 2 * sp); }
+  else for (let i = 0; i < 5; i++) { ctx.moveTo(s.x0, top + i * sp); ctx.lineTo(s.x1, top + i * sp); }
   ctx.stroke();
   const cx = s.x0 + sp;
   ctx.fillRect(cx, top + sp, sp * 0.5, 2 * sp);
   ctx.fillRect(cx + sp, top + sp, sp * 0.5, 2 * sp);
   if (!o.isFirst && s.measures.length) text(String(s.measures[0].index + 1), `italic ${sp * 1.3}px Georgia, serif`, s.x0 + sp * 0.8, top - sp * 1.8);
+  else if (single && INST[score.staff.inst]) text(INST[score.staff.inst].name, `italic ${sp * 1.35}px Georgia, serif`, s.x0, top - sp * 0.4, 'left');
   s.measures.forEach(drawMeasure);
   drawTies();
   ctx.restore();
@@ -888,8 +910,8 @@ function drawSystem(ctx, score, s, o) {
     ink();
     if (m.repeatStart) {
       const x = lm.x0 + sp * 0.2;
-      ctx.fillRect(x, top, sp * 0.5, 4 * sp);
-      ctx.fillRect(x + sp * 0.8, top, lineW * 1.4, 4 * sp);
+      ctx.fillRect(x, bT, sp * 0.5, bH);
+      ctx.fillRect(x + sp * 0.8, bT, lineW * 1.4, bH);
       repDots(x + sp * 1.35);
     }
     if (lm.showTime) drawTime(m.time, lm.timeX);
@@ -922,13 +944,13 @@ function drawSystem(ctx, score, s, o) {
     ink();
     const x1 = lm.x1;
     if (m.repeatEnd || isLast) {
-      ctx.fillRect(x1 - sp * 0.5, top, sp * 0.5, 4 * sp);
-      ctx.fillRect(x1 - sp * 1.0 - lineW * 1.4, top, lineW * 1.4, 4 * sp);
+      ctx.fillRect(x1 - sp * 0.5, bT, sp * 0.5, bH);
+      ctx.fillRect(x1 - sp * 1.0 - lineW * 1.4, bT, lineW * 1.4, bH);
       if (m.repeatEnd) repDots(x1 - sp * 1.55);
       const times = m.repeatTimes || 2;
       if (m.repeatEnd && times > 2) text('×' + times, `bold italic ${sp * 1.45}px Georgia, serif`, x1 - sp * 0.2, top - s.basePad + sp * 1.2, 'right');
     } else {
-      ctx.fillRect(x1 - lineW * 0.7, top, lineW * 1.4, 4 * sp);
+      ctx.fillRect(x1 - lineW * 0.7, bT, lineW * 1.4, bH);
     }
   }
 
@@ -964,10 +986,10 @@ function drawSystem(ctx, score, s, o) {
   }
 
   function geom(e, headX) {
-    const sorted = [...e.notes].sort((a, b) => INST[a.inst].step - INST[b.inst].step);
+    const sorted = [...e.notes].sort((a, b) => stepOf(a.inst) - stepOf(b.inst));
     let prev = null, prevRight = false, anyRight = false;
     const notes = sorted.map(n => {
-      const st = INST[n.inst].step;
+      const st = stepOf(n.inst);
       const right = prev !== null && st - prev === 1 && !prevRight;
       if (right) anyRight = true;
       prev = st; prevRight = right;
@@ -1234,7 +1256,7 @@ function drawSystem(ctx, score, s, o) {
 
   function drawRest(value, dots, x) {
     ink();
-    if (value === 1) ctx.fillRect(x, top + sp, sp * 1.3, sp * 0.55);
+    if (value === 1) ctx.fillRect(x, top + (single ? 2 : 1) * sp, sp * 1.3, sp * 0.55);
     else if (value === 2) ctx.fillRect(x, top + 2 * sp - sp * 0.55, sp * 1.3, sp * 0.55);
     else if (value === 4) {
       ctx.save(); ctx.lineWidth = sp * 0.32; ctx.lineJoin = 'round'; ctx.lineCap = 'round'; ctx.beginPath();
@@ -1354,16 +1376,16 @@ const SOUND = {
   hiHatHalf: [['n', { f: 6800, type: 'highpass', d: 0.18, g: 0.42 }]], hiHatPedal: [['n', { f: 6000, type: 'highpass', d: 0.07, g: 0.32 }]],
   ride: [['n', { f: 5200, type: 'bandpass', q: 0.7, d: 0.55, g: 0.3 }]], rideBell: [['t', { f0: 950, d: 0.7, g: 0.3 }]],
   crash: [['n', { f: 4000, type: 'highpass', d: 1.5, g: 0.5 }]], splash: [['n', { f: 6000, type: 'highpass', d: 0.55, g: 0.5 }]],
-  china: [['n', { f: 3000, type: 'bandpass', q: 1, d: 1.1, g: 0.65 }]], cowbell: [['t', { f0: 560, d: 0.25, g: 0.14, w: 'square' }]],
+  china: [['n', { f: 3000, type: 'bandpass', q: 1, d: 1.1, g: 0.65 }]], cowbell: [['t', { f0: 560, d: 0.25, g: 0.14, w: 'square' }]], cowbellFoot: [['t', { f0: 540, d: 0.22, g: 0.12, w: 'square' }]],
   tom1: [['t', { f0: 240, f1: 165, d: 0.35, g: 0.9 }]], tom2: [['t', { f0: 200, f1: 135, d: 0.4, g: 0.9 }]], tom3: [['t', { f0: 165, f1: 112, d: 0.45, g: 0.95 }]],
   floorTom: [['t', { f0: 130, f1: 86, d: 0.5, g: 1 }]], floorTom2: [['t', { f0: 108, f1: 70, d: 0.55, g: 1 }]],
   snare: [['n', { f: 1900, type: 'bandpass', q: 0.7, d: 0.18, g: 0.85 }]], rimshot: [['n', { f: 2200, type: 'bandpass', q: 0.8, d: 0.2, g: 1.1 }]],
   crossStick: [['n', { f: 2600, type: 'bandpass', q: 5, d: 0.05, g: 1.2 }]], bass: [['t', { f0: 125, f1: 46, d: 0.38, g: 1.3 }]]
 };
 // Mixagem (volume relativo) e posição no estéreo, do ponto de vista do baterista
-const MIX = { bass: 1.0, snare: 0.85, rimshot: 0.85, crossStick: 0.7, hiHat: 0.6, hiHatPedal: 0.5, hiHatHalf: 0.55, hiHatOpen: 0.55,
+const MIX = { cowbellFoot: 0.3, bass: 1.0, snare: 0.85, rimshot: 0.85, crossStick: 0.7, hiHat: 0.6, hiHatPedal: 0.5, hiHatHalf: 0.55, hiHatOpen: 0.55,
   ride: 0.5, rideBell: 0.45, crash: 0.55, splash: 0.5, china: 0.5, cowbell: 0.35, tom1: 0.78, tom2: 0.8, tom3: 0.82, floorTom: 0.85, floorTom2: 0.85 };
-const PAN = { bass: 0, snare: -0.18, rimshot: -0.18, crossStick: -0.18, hiHat: -0.38, hiHatPedal: -0.38, hiHatHalf: -0.38, hiHatOpen: -0.38,
+const PAN = { cowbellFoot: -0.45, bass: 0, snare: -0.18, rimshot: -0.18, crossStick: -0.18, hiHat: -0.38, hiHatPedal: -0.38, hiHatHalf: -0.38, hiHatOpen: -0.38,
   ride: 0.45, rideBell: 0.45, crash: -0.3, splash: -0.14, china: -0.5, cowbell: 0.3, tom1: -0.1, tom2: 0.08, tom3: 0.2, floorTom: 0.4, floorTom2: 0.52 };
 const HATS = ['hiHat', 'hiHatPedal', 'hiHatHalf', 'hiHatOpen'];
 const Kit = { buf: null, loading: null };
@@ -1434,7 +1456,7 @@ function voice(ac, dest, kind, p, t, vel) {
 // Um toque de um instrumento. vel: 0.15 (fantasma) … 1.3 (ff acentuado). Devolve o ganho (para abafar depois).
 function hit(ac, dest, inst, t, vel, opt) {
   t = Math.max(t, 0);
-  const layers = Kit.buf && Kit.buf[inst];
+  const layers = Kit.buf && Kit.buf[inst === 'cowbellFoot' ? 'cowbell' : inst];
   if (!layers) { const ps = SOUND[inst] || []; let g = null; ps.forEach(([k, p]) => { g = voice(ac, dest, k, p, t, vel); }); return g; }
   const n = layers.length;
   const li = n === 1 ? 0 : n === 2 ? (vel < 0.5 ? 0 : 1) : (vel < 0.4 ? 0 : vel < 0.9 ? 1 : 2);
@@ -1725,6 +1747,7 @@ function msg(t) { S.message = t; renderStatus(); }
 function normalize(score) {
   score.playback = score.playback || { metro: true, loop: false, countIn: true };
   if (score.intro == null) score.intro = '';
+  if (!score.staff) score.staff = { type: 'kit', inst: 'snare' };
   score.measures.forEach(m => {
     if (m.repeatTimes == null) m.repeatTimes = 2;
     if (m.volta == null) m.volta = 0;
@@ -1793,8 +1816,25 @@ function markerTarget() {
   const r = S.cursor.i > 0 ? { m: S.cursor.m, i: S.cursor.i - 1 } : S.lastInserted;
   return r && evAt(r) ? r : null;
 }
+// Pauta de bateria completa (5 linhas) ou de um instrumento só (1 linha)
+function setStaff(type, inst) {
+  inst = INST[inst] ? inst : 'snare';
+  const cur = S.score.staff || { type: 'kit', inst: 'snare' };
+  if (cur.type === type && (type === 'kit' || cur.inst === inst)) return;
+  edit(s => {
+    s.staff = { type, inst };
+    if (type === 'single') s.measures.forEach(m => m.events.forEach(e => {
+      if (!e.notes.length) return;
+      e.notes = [{ inst, ghost: e.notes.some(n => n.ghost) }];
+    }));
+  });
+  S.chord = false;
+  render();
+  flash(type === 'single' ? `Pauta de uma linha: ${INST[inst].name}` : 'Pauta de bateria completa');
+}
 function pad(inst) {
   S.message = '';
+  if (S.score.staff && S.score.staff.type === 'single') inst = S.score.staff.inst;
   if (S.chord) {
     const target = S.selection || markerTarget();
     if (!target || !evAt(target)) { msg('Toque numa nota da pauta para somar instrumentos a ela'); return; }
@@ -2043,6 +2083,10 @@ function buildPalette() {
     const b = e.target.closest('button'); if (!b) return;
     if (b.id === 'restBtn') restAction(); else pad(b.dataset.inst);
   });
+  $('#singleInst').innerHTML = PAD_ORDER.map(k => `<option value="${k}">${INST[k].name}</option>`).join('');
+  $('#singleNote').onclick = () => pad(S.score.staff.inst);
+  $('#singleRest').onclick = restAction;
+  $('#singleInst').onchange = e => setStaff('single', e.target.value);
 
   segButtons($('#g-accent'), [['none', '—', 'Sem acento'], ['accent', '>', 'Acento'], ['marcato', '^', 'Marcato']]);
   segButtons($('#g-ghost'), [['0', 'Normal'], ['1', '( ) Fantasma']]);
@@ -2136,6 +2180,13 @@ function renderStatus() {
 
 function renderPalette() {
   renderStatus();
+  const single = !!(S.score.staff && S.score.staff.type === 'single');
+  $('#pads').hidden = single; $('#singlePads').hidden = !single; $('#chordBtn').hidden = single;
+  if (single) {
+    const k = S.score.staff.inst, b = $('#singleNote');
+    b.className = 'pad big ' + INST[k].cat; b.textContent = '♪  ' + INST[k].name; b.setAttribute('aria-label', 'Escrever nota: ' + INST[k].name);
+    $('#singleInst').value = k;
+  }
   $('#pal').classList.toggle('collapsed', S.collapsed);
   $('#collapseBtn').setAttribute('aria-label', S.collapsed ? 'Abrir a paleta' : 'Recolher a paleta');
   ['notes', 'art', 'bar'].forEach(t => { $('#p-' + t).hidden = S.tab !== t; $('#t-' + t).setAttribute('aria-selected', String(S.tab === t && !S.collapsed)); });
@@ -2453,9 +2504,13 @@ function openInfo() {
   $('#fHuman').checked = prefs.human !== false; $('#fRoom').checked = prefs.room !== false;
   $('#fStick').value = s.sticking; $('#fPerLine').value = String(s.perLine); $('#fPaper').value = s.paper;
   $('#fMargin').value = String(s.pageMargin || 1.4);
+  const st = s.staff || { type: 'kit', inst: 'snare' };
+  if (!$('#fStaffInst').options.length) $('#fStaffInst').innerHTML = PAD_ORDER.map(k => `<option value="${k}">${INST[k].name}</option>`).join('');
+  $('#fStaff').value = st.type; $('#fStaffInst').value = st.inst; $('#fStaffInstRow').hidden = st.type !== 'single';
   openSheet('#infoSheet');
 }
 $('#titleBtn').onclick = openInfo;
+$('#fStaff').onchange = e => { $('#fStaffInstRow').hidden = e.target.value !== 'single'; };
 $('#paperHead').onclick = openInfo;
 $('#paperHead').onkeydown = e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openInfo(); } };
 $('#infoSave').onclick = () => {
@@ -2469,11 +2524,12 @@ $('#infoSave').onclick = () => {
     s.sticking = $('#fStick').value; s.perLine = parseInt($('#fPerLine').value, 10) || 0; s.paper = $('#fPaper').value; s.pageMargin = parseFloat($('#fMargin').value) || 1.4;
   });
   prefs.human = $('#fHuman').checked; prefs.room = $('#fRoom').checked; savePrefs();
+  setStaff($('#fStaff').value, $('#fStaffInst').value);
   $('#infoSheet').hidden = true; render();
 };
 $('#legend').innerHTML = Object.keys(INST).map(k => {
   const h = { n: '●', x: 'x', cx: '⊗', diam: '◆', tri: '▲', slash: '● cortada' }[INST[k].head];
-  const pos = { 11: 'acima, 2ª suplementar', 10: '1ª linha suplementar', 9: 'acima da 5ª linha', 8: '5ª linha', 7: '4º espaço', 6: '4ª linha', 5: '3º espaço', 4: '3ª linha', 3: '2º espaço', 2: '2ª linha', 1: '1º espaço', '-1': 'abaixo da pauta' }[INST[k].step];
+  const pos = { 11: 'acima, 2ª suplementar', 10: '1ª linha suplementar', 9: 'acima da 5ª linha', 8: '5ª linha', 7: '4º espaço', 6: '4ª linha', 5: '3º espaço', 4: '3ª linha', 3: '2º espaço', 2: '2ª linha', 1: '1º espaço', '-1': 'abaixo da pauta', '-2': 'linha suplementar abaixo' }[INST[k].step];
   const extra = k === 'hiHatOpen' ? ' com “o”' : k === 'hiHatHalf' ? ' com “ø”' : '';
   return `<span>${INST[k].name}</span><span>${h}${extra} · ${pos}</span>`;
 }).join('');
