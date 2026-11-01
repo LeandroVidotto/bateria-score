@@ -166,6 +166,7 @@ button { cursor: pointer; -webkit-tap-highlight-color: transparent; touch-action
 .staffseg { display: grid; grid-template-columns: 1fr 1fr; gap: 5px; }
 .staffseg button { height: 34px; border: 0; border-radius: 8px; background: var(--chip); font-weight: 700; font-size: 13.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding: 0 6px; }
 .staffseg button.on { background: var(--fg); color: var(--bg); }
+.staffseg.below #segUp { order: 2; }
 .single .rest1 { --c: var(--muted); height: 44px; }
 .single .pick { display: flex; flex-direction: column; justify-content: center; gap: 2px; font-size: 11.5px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; }
 .single .pick select { height: 34px; border: 1px solid var(--line); border-radius: 8px; background: var(--bg); font-size: 15px; font-weight: 600; text-transform: none; letter-spacing: 0; color: var(--fg); padding: 0 6px; }
@@ -417,6 +418,7 @@ button { cursor: pointer; -webkit-tap-highlight-color: transparent; touch-action
     </div>
     <div class="group"><h3>Pauta</h3>
       <div class="field"><label for="fStaff">Tipo de pauta</label><select id="fStaff"><option value="kit">Bateria completa (5 linhas)</option><option value="single">Um instrumento (1 linha)</option><option value="both">1 linha + bateria, juntas (2 pautas)</option></select></div>
+      <div class="field" id="fStaffPosRow"><label for="fStaffPos">Posição da pauta de 1 linha</label><select id="fStaffPos"><option value="above">Acima da bateria</option><option value="below">Abaixo da bateria</option></select></div>
       <div class="field" id="fStaffInstRow"><label for="fStaffInst">Instrumento da pauta de 1 linha<small>No modo de 1 linha, as notas já escritas passam a ser deste instrumento</small></label><select id="fStaffInst"></select></div>
     </div>
     <div class="group"><h3>Manulação e impressão</h3>
@@ -829,10 +831,12 @@ function layoutSystems(score, width, sp, originX, opts) {
 const isBoth = sc => !!(sc.staff && sc.staff.type === 'both');
 const kitEv = (sc, m) => isBoth(sc) && sc.staff.active === 'upper' ? (m.alt || []) : m.events;
 const upEv = (sc, m) => isBoth(sc) && sc.staff.active === 'upper' ? m.events : (m.alt || []);
+const lineBelow = sc => isBoth(sc) && sc.staff.pos === 'below';
 function staffViews(sc) {
+  const below = lineBelow(sc), plain = m => ({ ...m, label: '', volta: 0, repeatTimes: 2 });
   return {
-    kit: { ...sc, staff: { type: 'kit' }, measures: sc.measures.map(m => ({ ...m, events: kitEv(sc, m), label: '', volta: 0, repeatTimes: 2 })) },
-    up: { ...sc, staff: { type: 'single', inst: sc.staff.inst }, measures: sc.measures.map(m => ({ ...m, events: upEv(sc, m) })) }
+    kit: { ...sc, staff: { type: 'kit' }, measures: sc.measures.map(m => ({ ...(below ? m : plain(m)), events: kitEv(sc, m) })) },
+    up: { ...sc, staff: { type: 'single', inst: sc.staff.inst }, measures: sc.measures.map(m => ({ ...(below ? plain(m) : m), events: upEv(sc, m) })) }
   };
 }
 function layoutRows(sc, width, sp, originX) {
@@ -841,8 +845,15 @@ function layoutRows(sc, width, sp, originX) {
   const pl = sc.perLine > 0 ? sc.perLine : Math.min(layoutSystems(v.kit, width, sp, originX, { needOnly: true }), layoutSystems(v.up, width, sp, originX, { needOnly: true }));
   const ks = layoutSystems(v.kit, width, sp, originX, { perLine: pl, time: true });
   const us = layoutSystems(v.up, width, sp, originX, { perLine: pl, time: true });
+  const below = lineBelow(sc);
   return ks.map((k, i) => {
-    const u = us[i], gap = 2 * sp + Math.max(sp * 1.5, u.bottomPad - sp * 1.5) + k.topPad;
+    const u = us[i];
+    if (below) {
+      // bateria em cima, linha embaixo: distância do topo da bateria até o "topo" da pauta de 1 linha
+      const gap = 4 * sp + Math.max(sp * 1.5, k.bottomPad - sp * 0.5) + (u.topPad - 2 * sp);
+      return { kind: 'two', below: true, up: u, kit: k, vUp: v.up, vKit: v.kit, gap, height: k.topPad + gap + 2 * sp + Math.max(sp * 2.5, u.bottomPad), measures: k.measures, textBefore: k.textBefore, firstMeasure: k.firstMeasure };
+    }
+    const gap = 2 * sp + Math.max(sp * 1.5, u.bottomPad - sp * 1.5) + k.topPad;
     return { kind: 'two', up: u, kit: k, vUp: v.up, vKit: v.kit, gap, height: u.topPad + gap + 4 * sp + k.bottomPad, measures: k.measures, textBefore: k.textBefore, firstMeasure: k.firstMeasure };
   });
 }
@@ -851,15 +862,32 @@ function drawRow(ctx, sc, row, y, o) {
   const pr = o.playing || {};
   if (row.kind === 'one') { row.s.y = y + row.s.topPad; drawSystem(ctx, sc, row.s, { ...o, playing: pr.kit }); return; }
   const u = row.up, k = row.kit, sp = k.sp, upActive = sc.staff.active === 'upper';
-  u.y = y + u.topPad; k.y = u.y + row.gap;
-  drawSystem(ctx, row.vUp, u, { ...o, selection: upActive ? o.selection : null, cursor: upActive ? o.cursor : null, playing: pr.up, dim: o.editor && !upActive && !o.playing });
-  drawSystem(ctx, row.vKit, k, { ...o, isFirst: true, selection: upActive ? null : o.selection, cursor: upActive ? null : o.cursor, playing: pr.kit, dim: o.editor && upActive && !o.playing });
-  // liga as duas pautas: linha no início e barras de compasso atravessando
+  const upO = { ...o, selection: upActive ? o.selection : null, cursor: upActive ? o.cursor : null, playing: pr.up, dim: o.editor && !upActive && !o.playing };
+  const kitO = { ...o, selection: upActive ? null : o.selection, cursor: upActive ? null : o.cursor, playing: pr.kit, dim: o.editor && upActive && !o.playing };
   ctx.fillStyle = INK; const lw = Math.max(0.5, sp * 0.12);
+  const lastX = (list, lm) => lm.x1 - lw / 2 - (lm === list[list.length - 1] ? sp * 0.25 : 0);
+  if (row.below) {
+    k.y = y + k.topPad; u.y = k.y + row.gap;
+    drawSystem(ctx, row.vKit, k, kitO);
+    drawSystem(ctx, row.vUp, u, { ...upO, isFirst: true, noName: !o.isFirst });
+    ctx.fillStyle = INK;
+    ctx.fillRect(k.x0, k.y, lw * 1.4, u.y + 3 * sp - k.y);
+    k.measures.forEach(lm => ctx.fillRect(lastX(k.measures, lm), k.y + 4 * sp, lw, u.y + sp - k.y - 4 * sp));
+    return;
+  }
+  u.y = y + u.topPad; k.y = u.y + row.gap;
+  drawSystem(ctx, row.vUp, u, upO);
+  drawSystem(ctx, row.vKit, k, { ...kitO, isFirst: true });
+  // liga as duas pautas: linha no início e barras de compasso atravessando
+  ctx.fillStyle = INK;
   ctx.fillRect(u.x0, u.y + sp, lw * 1.4, k.y - u.y - sp);
-  u.measures.forEach(lm => ctx.fillRect(lm.x1 - lw / 2 - (lm === u.measures[u.measures.length - 1] ? sp * 0.25 : 0), u.y + 3 * sp, lw, k.y - u.y - 3 * sp));
+  u.measures.forEach(lm => ctx.fillRect(lastX(u.measures, lm), u.y + 3 * sp, lw, k.y - u.y - 3 * sp));
 }
-function rowStaffAt(row, py) { return row.kind === 'two' ? (py < (row.up.y + 2 * row.up.sp + row.kit.y) / 2 ? 'upper' : 'kit') : 'kit'; }
+function rowStaffAt(row, py) {
+  if (row.kind !== 'two') return 'kit';
+  if (row.below) return py > (row.kit.y + 4 * row.kit.sp + row.up.y + 2 * row.up.sp) / 2 ? 'upper' : 'kit';
+  return py < (row.up.y + 2 * row.up.sp + row.kit.y) / 2 ? 'upper' : 'kit';
+}
 
 function hitTest(px, s) {
   if (!s.measures.length) return null;
@@ -894,7 +922,7 @@ function drawSystem(ctx, score, s, o) {
   ctx.fillRect(cx, top + sp, sp * 0.5, 2 * sp);
   ctx.fillRect(cx + sp, top + sp, sp * 0.5, 2 * sp);
   if (!o.isFirst && s.measures.length) text(String(s.measures[0].index + 1), `italic ${sp * 1.3}px Georgia, serif`, s.x0 + sp * 0.8, top - sp * 1.8);
-  else if (single && !o.noName) text(score.staff.inst === 'agogo' ? 'Agogô' : staffInstName(score.staff.inst), `italic ${sp * 1.35}px Georgia, serif`, s.x0, top - sp * 0.4, 'left');
+  else if (single && !o.noName) text(score.staff.inst === 'agogo' ? 'Agogô' : staffInstName(score.staff.inst), `italic ${sp * 1.35}px Georgia, serif`, s.x0 + sp * 0.6, top - sp * 0.4, 'left');
   s.measures.forEach(drawMeasure);
   drawTies();
   ctx.restore();
@@ -1907,14 +1935,18 @@ function convertNotes(list, inst) {
   });
 }
 // Pauta: 'kit' (5 linhas), 'single' (1 linha) ou 'both' (1 linha em cima + bateria embaixo)
-function setStaff(type, inst) {
+function setStaff(type, inst, pos) {
   inst = STAFF_INSTS.includes(inst) ? inst : (type === 'both' ? 'agogo' : 'snare');
   const cur = S.score.staff || { type: 'kit', inst: 'snare' };
-  if (cur.type === type && (type === 'kit' || cur.inst === inst)) return;
+  pos = pos || cur.pos || 'above';
+  if (cur.type === type && (type === 'kit' || cur.inst === inst)) {
+    if (type === 'both' && (cur.pos || 'above') !== pos) { edit(s => { s.staff.pos = pos; }); render(); flash(pos === 'below' ? 'Pauta de 1 linha abaixo da bateria' : 'Pauta de 1 linha acima da bateria'); }
+    return;
+  }
   edit(s => {
     swapStaffData(s, 'kit');                    // bateria de volta em m.events
     s.measures.forEach(m => { m.alt = m.alt || []; });
-    s.staff = { type, inst, active: 'kit' };
+    s.staff = { type, inst, active: 'kit', pos };
     if (type === 'single') s.measures.forEach(m => convertNotes(m.events, inst));
     if (type === 'both') s.measures.forEach(m => convertNotes(m.alt, inst));
   });
@@ -2278,7 +2310,7 @@ function renderPalette() {
   renderStatus();
   const single = singleActive(), both = isBoth(S.score);
   $('#pads').hidden = single; $('#singlePads').hidden = !single; $('#chordBtn').hidden = single;
-  $('#staffSeg').hidden = !both; $('#pal').classList.toggle('both', both);
+  $('#staffSeg').hidden = !both; $('#pal').classList.toggle('both', both); $('#staffSeg').classList.toggle('below', lineBelow(S.score));
   if (both) {
     $('#segUp').textContent = (S.score.staff.inst === 'agogo' ? 'Agogô' : staffInstName(S.score.staff.inst)) + ' (1 linha)';
     $('#segUp').classList.toggle('on', S.score.staff.active === 'upper'); $('#segKit').classList.toggle('on', S.score.staff.active !== 'upper');
@@ -2616,10 +2648,11 @@ function openInfo() {
   const st = s.staff || { type: 'kit', inst: 'snare' };
   if (!$('#fStaffInst').options.length) $('#fStaffInst').innerHTML = STAFF_INSTS.map(k => `<option value="${k}">${staffInstName(k)}</option>`).join('');
   $('#fStaff').value = st.type; $('#fStaffInst').value = st.inst; $('#fStaffInstRow').hidden = st.type === 'kit';
+  $('#fStaffPos').value = st.pos || 'above'; $('#fStaffPosRow').hidden = st.type !== 'both';
   openSheet('#infoSheet');
 }
 $('#titleBtn').onclick = openInfo;
-$('#fStaff').onchange = e => { $('#fStaffInstRow').hidden = e.target.value === 'kit'; if (e.target.value === 'both' && $('#fStaffInst').value === 'snare') $('#fStaffInst').value = 'agogo'; };
+$('#fStaff').onchange = e => { $('#fStaffInstRow').hidden = e.target.value === 'kit'; $('#fStaffPosRow').hidden = e.target.value !== 'both'; if (e.target.value === 'both' && $('#fStaffInst').value === 'snare') $('#fStaffInst').value = 'agogo'; };
 $('#paperHead').onclick = openInfo;
 $('#paperHead').onkeydown = e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openInfo(); } };
 $('#infoSave').onclick = () => {
@@ -2633,7 +2666,7 @@ $('#infoSave').onclick = () => {
     s.sticking = $('#fStick').value; s.perLine = parseInt($('#fPerLine').value, 10) || 0; s.paper = $('#fPaper').value; s.pageMargin = parseFloat($('#fMargin').value) || 1.4;
   });
   prefs.human = $('#fHuman').checked; prefs.room = $('#fRoom').checked; savePrefs();
-  setStaff($('#fStaff').value, $('#fStaffInst').value);
+  setStaff($('#fStaff').value, $('#fStaffInst').value, $('#fStaffPos').value);
   $('#infoSheet').hidden = true; render();
 };
 $('#legend').innerHTML = Object.keys(INST).map(k => {
