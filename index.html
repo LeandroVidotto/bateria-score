@@ -147,6 +147,7 @@ button { cursor: pointer; -webkit-tap-highlight-color: transparent; touch-action
 .tabs .icon { width: 34px; height: 32px; }
 .tabs .icon svg { width: 18px; height: 18px; transition: transform .15s ease; }
 .collapsed .tabs .icon svg { transform: rotate(180deg); }
+.pal.both .tabpanel { height: 256px; }
 .tabpanel { height: 216px; overflow-y: auto; overscroll-behavior: contain; display: grid; align-content: start; gap: 7px; }
 .collapsed .tabpanel { display: none !important; }
 
@@ -161,12 +162,16 @@ button { cursor: pointer; -webkit-tap-highlight-color: transparent; touch-action
 .pad.in { background: color-mix(in srgb, var(--c) 45%, transparent); box-shadow: inset 0 0 0 2px var(--c); }
 .single { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 6px; }
 .single .big { grid-column: 1 / -1; height: 64px; font-size: 18px; font-weight: 700; }
+.single.pair .big { grid-column: auto; height: 58px; font-size: 16px; }
+.staffseg { display: grid; grid-template-columns: 1fr 1fr; gap: 5px; }
+.staffseg button { height: 34px; border: 0; border-radius: 8px; background: var(--chip); font-weight: 700; font-size: 13.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding: 0 6px; }
+.staffseg button.on { background: var(--fg); color: var(--bg); }
 .single .rest1 { --c: var(--muted); height: 44px; }
 .single .pick { display: flex; flex-direction: column; justify-content: center; gap: 2px; font-size: 11.5px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; }
 .single .pick select { height: 34px; border: 1px solid var(--line); border-radius: 8px; background: var(--bg); font-size: 15px; font-weight: 600; text-transform: none; letter-spacing: 0; color: var(--fg); padding: 0 6px; }
 .pad.cym { --c: var(--cym); } .pad.drum { --c: var(--drum); } .pad.foot { --c: var(--foot); }
 .pad.rest { --c: var(--muted); grid-column: span 2; }
-.pad[data-inst="cowbell"], .pad[data-inst="cowbellFoot"] { grid-column: span 2; }
+.pad[data-inst="cowbell"], .pad[data-inst="cowbellFoot"], .pad[data-inst="agogoHi"], .pad[data-inst="agogoLo"] { white-space: normal; line-height: 1.05; }
 
 .sect { font-size: 11.5px; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); font-weight: 700; padding-top: 2px; }
 .opt { display: grid; grid-template-columns: 74px minmax(0, 1fr); gap: 6px; align-items: start; }
@@ -208,10 +213,9 @@ button { cursor: pointer; -webkit-tap-highlight-color: transparent; touch-action
     grid-template-areas: "bar bar" "desk pal"; }
   #palette { border-top: 0; border-left: 1px solid var(--line); overflow-y: auto; }
   #palette .pal { padding-left: 12px; padding-right: max(12px, env(safe-area-inset-right, 0px)); }
-  .tabpanel { height: auto; overflow: visible; }
+  .tabpanel, .pal.both .tabpanel { height: auto; overflow: visible; }
   .pads { grid-template-columns: repeat(4, minmax(0, 1fr)); }
-  .pad.rest { grid-column: span 4; }
-  .pad[data-inst="cowbell"], .pad[data-inst="cowbellFoot"] { grid-column: span 1; }
+  .pad.rest { grid-column: span 2; }
   #desk > .gut.paperwrap { padding-left: max(12px, env(safe-area-inset-left, 0px)); padding-right: 12px; }
 }
 
@@ -318,10 +322,12 @@ button { cursor: pointer; -webkit-tap-highlight-color: transparent; touch-action
       </div>
 
       <div class="tabpanel" id="p-notes" role="tabpanel">
+        <div class="staffseg" id="staffSeg" hidden><button id="segUp"></button><button id="segKit">Bateria (5 linhas)</button></div>
         <div class="values" id="rowValues"></div>
         <div class="pads" id="pads"></div>
         <div class="single" id="singlePads" hidden>
           <button class="pad big" id="singleNote"></button>
+          <button class="pad big" id="singleNote2" hidden></button>
           <button class="pad rest1" id="singleRest">Pausa</button>
           <label class="pick"><span>Instrumento</span><select id="singleInst" aria-label="Instrumento da pauta"></select></label>
         </div>
@@ -410,8 +416,8 @@ button { cursor: pointer; -webkit-tap-highlight-color: transparent; touch-action
       <div class="field"><label for="fRoom">Ambiência de sala</label><input type="checkbox" id="fRoom"></div>
     </div>
     <div class="group"><h3>Pauta</h3>
-      <div class="field"><label for="fStaff">Tipo de pauta</label><select id="fStaff"><option value="kit">Bateria completa (5 linhas)</option><option value="single">Um instrumento (1 linha)</option></select></div>
-      <div class="field" id="fStaffInstRow"><label for="fStaffInst">Instrumento<small>As notas já escritas passam a ser deste instrumento</small></label><select id="fStaffInst"></select></div>
+      <div class="field"><label for="fStaff">Tipo de pauta</label><select id="fStaff"><option value="kit">Bateria completa (5 linhas)</option><option value="single">Um instrumento (1 linha)</option><option value="both">1 linha + bateria, juntas (2 pautas)</option></select></div>
+      <div class="field" id="fStaffInstRow"><label for="fStaffInst">Instrumento da pauta de 1 linha<small>No modo de 1 linha, as notas já escritas passam a ser deste instrumento</small></label><select id="fStaffInst"></select></div>
     </div>
     <div class="group"><h3>Manulação e impressão</h3>
       <div class="field"><label for="fStick">Letras da manulação</label><select id="fStick"><option value="rl">R / L</option><option value="de">D / E</option></select></div>
@@ -574,6 +580,8 @@ const INST = {
   china:      { name: 'China',               short: 'China',      step: 11, head: 'cx',    cat: 'cym' },
   cowbell:    { name: 'Cowbell',             short: 'Cowbell',    step: 7,  head: 'tri',   cat: 'cym' },
   cowbellFoot:{ name: 'Cowbell com o pé esquerdo', short: 'Cowbell pé', step: -2, head: 'tri', cat: 'foot' },
+  agogoHi:    { name: 'Agogô agudo',         short: 'Agogô agudo', step: 12, head: 'tri',  cat: 'cym' },
+  agogoLo:    { name: 'Agogô grave',         short: 'Agogô grave', step: 11, head: 'tri',  cat: 'cym' },
   tom1:       { name: 'Tom 1',               short: 'Tom 1',      step: 7,  head: 'n',     cat: 'drum' },
   tom2:       { name: 'Tom 2',               short: 'Tom 2',      step: 6,  head: 'n',     cat: 'drum' },
   tom3:       { name: 'Tom 3',               short: 'Tom 3',      step: 4,  head: 'n',     cat: 'drum' },
@@ -587,7 +595,10 @@ const INST = {
 const PAD_ORDER = ['hiHat', 'snare', 'bass', 'tom1', 'tom2', 'floorTom',
                    'hiHatOpen', 'hiHatHalf', 'hiHatPedal', 'ride', 'rideBell', 'crash',
                    'tom3', 'floorTom2', 'rimshot', 'crossStick', 'china', 'splash',
-                   'cowbell', 'cowbellFoot'];
+                   'cowbell', 'cowbellFoot', 'agogoHi', 'agogoLo'];
+// instrumentos possíveis numa pauta de uma linha ('agogo' = agudo acima da linha e grave abaixo)
+const STAFF_INSTS = ['agogo', ...PAD_ORDER];
+const staffInstName = k => k === 'agogo' ? 'Agogô (agudo e grave)' : (INST[k] ? INST[k].name : k);
 const isFoot = k => INST[k].cat === 'foot';
 const isCymbal = k => ['hiHat', 'hiHatOpen', 'hiHatHalf', 'ride', 'rideBell', 'crash', 'splash', 'china'].includes(k);
 const DYN = { pp: 'pp', p: 'p', mp: 'mp', mf: 'mf', f: 'f', ff: 'ff', sfz: 'sfz', cresc: 'cresc.', dim: 'dim.' };
@@ -743,7 +754,8 @@ function natW(e, sp) {
   return w;
 }
 
-function layoutSystems(score, width, sp, originX) {
+function layoutSystems(score, width, sp, originX, opts) {
+  opts = opts || {};
   const ms = score.measures;
   const infos = ms.map((m, i) => {
     const showTime = i === 0 || !sameTime(ms[i - 1].time, m.time);
@@ -763,7 +775,8 @@ function layoutSystems(score, width, sp, originX) {
   const clefW = sp * 3.6, avail = width - clefW;
   // Todos os compassos têm a mesma largura: cabe na linha o número que o compasso mais cheio permite
   const need = Math.max(...infos.map(inf => inf.leading + inf.content * 0.8 + inf.trailing), sp * 8);
-  const perLine = score.perLine > 0 ? score.perLine : Math.max(1, Math.floor(avail / need));
+  const perLine = opts.perLine || (score.perLine > 0 ? score.perLine : Math.max(1, Math.floor(avail / need)));
+  if (opts.needOnly) return perLine;
   const mw = avail / perLine;
   const lines = [];
   let cur = [];
@@ -783,9 +796,11 @@ function layoutSystems(score, width, sp, originX) {
       const timeX = x0 + (m.repeatStart ? sp * 1.6 : 0) + sp * 0.5 + inf.timeW / 2;
       const contentX = x0 + inf.leading;
       const contentW = Math.max(sp * 2, mw - inf.leading - inf.trailing), factor = contentW / inf.content;
-      let ex = contentX;
+      let ex = contentX, tAt = ZERO;
+      const mLen = fval(cap(m.time));
       const events = visibleEvents(m).map((e, k) => {
-        const w = inf.widths[k] * factor;
+        let w = inf.widths[k] * factor;
+        if (opts.time) { ex = contentX + contentW * fval(tAt) / mLen; w = contentW * fval(dur(e)) / mLen; tAt = fadd(tAt, dur(e)); }
         const le = { m: i, i: k, slotX: ex, slotW: w, headX: ex + leftPad(e, sp) };
         ex += w;
         if (!isRest(e) && e.accent !== 'none') hasAcc = true;
@@ -809,6 +824,43 @@ function layoutSystems(score, width, sp, originX) {
   });
 }
 
+/* ---- Duas pautas juntas: 1 linha (em cima) + bateria (embaixo) ---- */
+// A pauta que está sendo editada guarda as notas em m.events; a outra fica em m.alt.
+const isBoth = sc => !!(sc.staff && sc.staff.type === 'both');
+const kitEv = (sc, m) => isBoth(sc) && sc.staff.active === 'upper' ? (m.alt || []) : m.events;
+const upEv = (sc, m) => isBoth(sc) && sc.staff.active === 'upper' ? m.events : (m.alt || []);
+function staffViews(sc) {
+  return {
+    kit: { ...sc, staff: { type: 'kit' }, measures: sc.measures.map(m => ({ ...m, events: kitEv(sc, m), label: '', volta: 0, repeatTimes: 2 })) },
+    up: { ...sc, staff: { type: 'single', inst: sc.staff.inst }, measures: sc.measures.map(m => ({ ...m, events: upEv(sc, m) })) }
+  };
+}
+function layoutRows(sc, width, sp, originX) {
+  if (!isBoth(sc)) return layoutSystems(sc, width, sp, originX).map(sy => ({ kind: 'one', s: sy, height: sy.height, measures: sy.measures, textBefore: sy.textBefore, firstMeasure: sy.firstMeasure }));
+  const v = staffViews(sc);
+  const pl = sc.perLine > 0 ? sc.perLine : Math.min(layoutSystems(v.kit, width, sp, originX, { needOnly: true }), layoutSystems(v.up, width, sp, originX, { needOnly: true }));
+  const ks = layoutSystems(v.kit, width, sp, originX, { perLine: pl, time: true });
+  const us = layoutSystems(v.up, width, sp, originX, { perLine: pl, time: true });
+  return ks.map((k, i) => {
+    const u = us[i], gap = 2 * sp + Math.max(sp * 1.5, u.bottomPad - sp * 1.5) + k.topPad;
+    return { kind: 'two', up: u, kit: k, vUp: v.up, vKit: v.kit, gap, height: u.topPad + gap + 4 * sp + k.bottomPad, measures: k.measures, textBefore: k.textBefore, firstMeasure: k.firstMeasure };
+  });
+}
+function drawRow(ctx, sc, row, y, o) {
+  o = o || {};
+  const pr = o.playing || {};
+  if (row.kind === 'one') { row.s.y = y + row.s.topPad; drawSystem(ctx, sc, row.s, { ...o, playing: pr.kit }); return; }
+  const u = row.up, k = row.kit, sp = k.sp, upActive = sc.staff.active === 'upper';
+  u.y = y + u.topPad; k.y = u.y + row.gap;
+  drawSystem(ctx, row.vUp, u, { ...o, selection: upActive ? o.selection : null, cursor: upActive ? o.cursor : null, playing: pr.up, dim: o.editor && !upActive && !o.playing });
+  drawSystem(ctx, row.vKit, k, { ...o, isFirst: true, selection: upActive ? null : o.selection, cursor: upActive ? null : o.cursor, playing: pr.kit, dim: o.editor && upActive && !o.playing });
+  // liga as duas pautas: linha no início e barras de compasso atravessando
+  ctx.fillStyle = INK; const lw = Math.max(0.5, sp * 0.12);
+  ctx.fillRect(u.x0, u.y + sp, lw * 1.4, k.y - u.y - sp);
+  u.measures.forEach(lm => ctx.fillRect(lm.x1 - lw / 2 - (lm === u.measures[u.measures.length - 1] ? sp * 0.25 : 0), u.y + 3 * sp, lw, k.y - u.y - 3 * sp));
+}
+function rowStaffAt(row, py) { return row.kind === 'two' ? (py < (row.up.y + 2 * row.up.sp + row.kit.y) / 2 ? 'upper' : 'kit') : 'kit'; }
+
 function hitTest(px, s) {
   if (!s.measures.length) return null;
   let lm = s.measures.find(m => px >= m.x0 && px <= m.x1);
@@ -824,12 +876,13 @@ function drawSystem(ctx, score, s, o) {
   o = o || {};
   const sp = s.sp, top = s.y, hw = sp * 1.3, stemW = Math.max(0.6, sp * 0.13), lineW = Math.max(0.5, sp * 0.1);
   const single = !!(score.staff && score.staff.type === 'single');
-  const stepOf = inst => single ? 4 : INST[inst].step;      // pauta de uma linha: tudo na linha
+  const stepOf = inst => single ? (score.staff.inst === 'agogo' ? (inst === 'agogoLo' ? 3 : 5) : 4) : INST[inst].step;   // pauta de uma linha
   const bT = single ? top + sp : top, bH = single ? 2 * sp : 4 * sp;   // altura das barras de compasso
   const Y = st => top + 4 * sp - st * sp / 2;
   const TAU = Math.PI * 2;
   const placed = {};   // "m:i" -> { headX, notes:[{inst,x,y}] } para as ligaduras
   ctx.save();
+  if (o.dim) ctx.globalAlpha = 0.5;
   ctx.lineCap = 'butt'; ctx.lineJoin = 'miter';
   if (o.editor || o.playing) s.measures.forEach(editorBg);
   ink();
@@ -841,7 +894,7 @@ function drawSystem(ctx, score, s, o) {
   ctx.fillRect(cx, top + sp, sp * 0.5, 2 * sp);
   ctx.fillRect(cx + sp, top + sp, sp * 0.5, 2 * sp);
   if (!o.isFirst && s.measures.length) text(String(s.measures[0].index + 1), `italic ${sp * 1.3}px Georgia, serif`, s.x0 + sp * 0.8, top - sp * 1.8);
-  else if (single && INST[score.staff.inst]) text(INST[score.staff.inst].name, `italic ${sp * 1.35}px Georgia, serif`, s.x0, top - sp * 0.4, 'left');
+  else if (single && !o.noName) text(score.staff.inst === 'agogo' ? 'Agogô' : staffInstName(score.staff.inst), `italic ${sp * 1.35}px Georgia, serif`, s.x0, top - sp * 0.4, 'left');
   s.measures.forEach(drawMeasure);
   drawTies();
   ctx.restore();
@@ -1321,7 +1374,7 @@ function docLayout(score) {
     richLines(mc, score.intro, w, 10.5, f.align, f.fi * CM, f.fiFirst).forEach(l => blocks.push({ h: l.h, draw: (ctx, y) => l.draw(ctx, x0, y) }));
     blocks.push({ h: 8, spacer: true, draw() {} });
   }
-  const systems = layoutSystems(score, W, sp, margin);
+  const systems = layoutRows(score, W, sp, margin);
   systems.forEach((sy, si) => {
     if (hasText(sy.textBefore)) {
       const t = sy.textBefore;
@@ -1335,7 +1388,7 @@ function docLayout(score) {
       body.forEach((l, k) => blocks.push({ h: l.h, keep: k === body.length - 1, draw: (ctx, y) => l.draw(ctx, x0, y) }));
       blocks.push({ h: 2, draw() {} });
     }
-    blocks.push({ h: sy.height + sp * 1.5, draw: (ctx, y) => { sy.y = y + sy.topPad; drawSystem(ctx, score, sy, { isFirst: si === 0 }); } });
+    blocks.push({ h: sy.height + sp * 1.5, draw: (ctx, y) => drawRow(ctx, score, sy, y, { isFirst: si === 0 }) });
   });
   const pages = [[]], limit = P.h - margin - footer;
   let y = margin;
@@ -1377,6 +1430,8 @@ const SOUND = {
   ride: [['n', { f: 5200, type: 'bandpass', q: 0.7, d: 0.55, g: 0.3 }]], rideBell: [['t', { f0: 950, d: 0.7, g: 0.3 }]],
   crash: [['n', { f: 4000, type: 'highpass', d: 1.5, g: 0.5 }]], splash: [['n', { f: 6000, type: 'highpass', d: 0.55, g: 0.5 }]],
   china: [['n', { f: 3000, type: 'bandpass', q: 1, d: 1.1, g: 0.65 }]], cowbell: [['t', { f0: 560, d: 0.25, g: 0.14, w: 'square' }]], cowbellFoot: [['t', { f0: 540, d: 0.22, g: 0.12, w: 'square' }]],
+  agogoHi: [['t', { f0: 1180, d: 0.5, g: 0.24 }], ['t', { f0: 2560, d: 0.3, g: 0.09 }], ['t', { f0: 3740, d: 0.16, g: 0.045 }], ['n', { f: 3600, type: 'bandpass', q: 2, d: 0.012, g: 0.22 }]],
+  agogoLo: [['t', { f0: 790, d: 0.55, g: 0.26 }], ['t', { f0: 1710, d: 0.32, g: 0.1 }], ['t', { f0: 2520, d: 0.18, g: 0.05 }], ['n', { f: 2600, type: 'bandpass', q: 2, d: 0.012, g: 0.2 }]],
   tom1: [['t', { f0: 240, f1: 165, d: 0.35, g: 0.9 }]], tom2: [['t', { f0: 200, f1: 135, d: 0.4, g: 0.9 }]], tom3: [['t', { f0: 165, f1: 112, d: 0.45, g: 0.95 }]],
   floorTom: [['t', { f0: 130, f1: 86, d: 0.5, g: 1 }]], floorTom2: [['t', { f0: 108, f1: 70, d: 0.55, g: 1 }]],
   snare: [['n', { f: 1900, type: 'bandpass', q: 0.7, d: 0.18, g: 0.85 }]], rimshot: [['n', { f: 2200, type: 'bandpass', q: 0.8, d: 0.2, g: 1.1 }]],
@@ -1541,6 +1596,13 @@ function buildTimeline(score, o) {
   }
   return { items, clicks, total: t, start, whole };
 }
+function buildTimelineAll(score, o) {
+  if (!isBoth(score)) { const tl = buildTimeline(score, o); tl.items.forEach(it => { it.st = 'kit'; }); return tl; }
+  const v = staffViews(score);
+  const tk = buildTimeline(v.kit, o), tu = buildTimeline(v.up, { ...o, metro: false });
+  tk.items.forEach(it => { it.st = 'kit'; }); tu.items.forEach(it => { it.st = 'up'; });
+  return { ...tk, items: tk.items.concat(tu.items).sort((a, b) => a.t - b.t), total: Math.max(tk.total, tu.total) };
+}
 const DYN_MUL = { pp: 0.42, p: 0.58, mp: 0.78, mf: 0.95, f: 1.12, ff: 1.28, sfz: 1.3 };
 function scheduleAll(ac, dest, tl, t0, opt) {
   const human = !!opt.human, jit = () => human ? (Math.random() + Math.random() - 1) * 0.006 : 0;
@@ -1579,7 +1641,7 @@ async function startPlayback() {
   if (!ac) { msg('Este navegador não toca som.'); return; }
   const from = S.selection ? S.selection.m : 0;
   const pb = S.score.playback || {};
-  const tl = buildTimeline(S.score, { from, metro: pb.metro, countIn: pb.countIn, reps: 1 });
+  const tl = buildTimelineAll(S.score, { from, metro: pb.metro, countIn: pb.countIn, reps: 1 });
   if (!tl.items.length) return;
   Player.playing = true; Player.tl = tl; Player.last = '';
   $('#playBtn').classList.add('on'); $('#playBtn').setAttribute('aria-label', 'Parar');
@@ -1618,11 +1680,12 @@ function tick() {
       Player.tl = loopTl; Player.t0 = t0; scheduleAll(ac, Player.bus.input, loopTl, t0, soundPrefs());
     } else { stopPlayback(); return; }
   }
-  const it = Player.tl.items.find(x => now >= x.t && now < x.t + x.d);
-  const key = it ? it.ref.m + ':' + it.ref.i : '';
+  const inNow = st => Player.tl.items.find(x => x.st === st && now >= x.t && now < x.t + x.d);
+  const itK = inNow('kit'), itU = inNow('up'), it = itK || itU;
+  const key = (itK ? itK.ref.m + ':' + itK.ref.i : '') + '|' + (itU ? itU.ref.m + ':' + itU.ref.i : '');
   if (key !== Player.last) {
     Player.last = key;
-    S.playRef = it ? it.ref : null;
+    S.playRef = it ? { kit: itK && itK.ref, up: itU && itU.ref } : null;
     renderScore();
     if (it) {
       const sys = systemsCache.findIndex(s => s.measures.some(lm => lm.index === it.ref.m));
@@ -1637,7 +1700,7 @@ function tick() {
 async function renderAudio(score, o, onProgress) {
   const ac = audio();
   await ensureKit(ac || new (window.OfflineAudioContext || window.webkitOfflineAudioContext)(1, 1, 44100));
-  const tl = buildTimeline(score, { from: 0, bpm: o.bpm, metro: o.metro, countIn: o.countIn, reps: o.reps });
+  const tl = buildTimelineAll(score, { from: 0, bpm: o.bpm, metro: o.metro, countIn: o.countIn, reps: o.reps });
   if (!tl.items.length) throw new Error('vazio');
   const rate = 44100, lead = 0.15, tail = 2.2;
   const secs = lead + tl.total + tail;
@@ -1748,6 +1811,8 @@ function normalize(score) {
   score.playback = score.playback || { metro: true, loop: false, countIn: true };
   if (score.intro == null) score.intro = '';
   if (!score.staff) score.staff = { type: 'kit', inst: 'snare' };
+  if (!score.staff.active) score.staff.active = 'kit';
+  score.measures.forEach(m => { if (!Array.isArray(m.alt)) m.alt = []; });
   score.measures.forEach(m => {
     if (m.repeatTimes == null) m.repeatTimes = 2;
     if (m.volta == null) m.volta = 0;
@@ -1817,24 +1882,50 @@ function markerTarget() {
   return r && evAt(r) ? r : null;
 }
 // Pauta de bateria completa (5 linhas) ou de um instrumento só (1 linha)
+// Troca a pauta que está sendo editada (só no modo de duas pautas). Não entra no desfazer.
+function swapStaffData(s, which) {
+  if (!isBoth(s) || s.staff.active === which) return;
+  s.measures.forEach(m => { const a = m.alt || []; m.alt = m.events; m.events = a; });
+  s.staff.active = which;
+}
+function switchStaff(which) {
+  if (!isBoth(S.score) || S.score.staff.active === which) return;
+  const s = clone(S.score); swapStaffData(s, which); S.score = s;
+  S.selection = null; S.lastInserted = null; S.chord = false;
+  // continua de onde esta pauta parou: primeiro compasso que ainda não está completo
+  const k = s.measures.findIndex(m => !m.simile && fcmp(remaining(m), ZERO) > 0);
+  S.cursor = k >= 0 ? { m: k, i: s.measures[k].events.length } : { m: s.measures.length - 1, i: s.measures[s.measures.length - 1].events.length };
+  clampCursor(); setTimeout(revealCursor, 0);
+  persist(); render();
+}
+function convertNotes(list, inst) {
+  list.forEach(e => {
+    if (!e.notes.length) return;
+    const ghost = e.notes.some(n => n.ghost);
+    const keepLo = inst === 'agogo' && e.notes.some(n => n.inst === 'agogoLo');
+    e.notes = [{ inst: inst === 'agogo' ? (keepLo ? 'agogoLo' : 'agogoHi') : inst, ghost }];
+  });
+}
+// Pauta: 'kit' (5 linhas), 'single' (1 linha) ou 'both' (1 linha em cima + bateria embaixo)
 function setStaff(type, inst) {
-  inst = INST[inst] ? inst : 'snare';
+  inst = STAFF_INSTS.includes(inst) ? inst : (type === 'both' ? 'agogo' : 'snare');
   const cur = S.score.staff || { type: 'kit', inst: 'snare' };
   if (cur.type === type && (type === 'kit' || cur.inst === inst)) return;
   edit(s => {
-    s.staff = { type, inst };
-    if (type === 'single') s.measures.forEach(m => m.events.forEach(e => {
-      if (!e.notes.length) return;
-      e.notes = [{ inst, ghost: e.notes.some(n => n.ghost) }];
-    }));
+    swapStaffData(s, 'kit');                    // bateria de volta em m.events
+    s.measures.forEach(m => { m.alt = m.alt || []; });
+    s.staff = { type, inst, active: 'kit' };
+    if (type === 'single') s.measures.forEach(m => convertNotes(m.events, inst));
+    if (type === 'both') s.measures.forEach(m => convertNotes(m.alt, inst));
   });
-  S.chord = false;
+  S.chord = false; S.selection = null; clampCursor();
   render();
-  flash(type === 'single' ? `Pauta de uma linha: ${INST[inst].name}` : 'Pauta de bateria completa');
+  flash(type === 'single' ? `Pauta de uma linha: ${staffInstName(inst)}` : type === 'both' ? `Duas pautas: ${staffInstName(inst)} + bateria. Toque numa pauta para escrever nela.` : 'Pauta de bateria completa');
 }
+const singleActive = () => !!(S.score.staff && (S.score.staff.type === 'single' || (S.score.staff.type === 'both' && S.score.staff.active === 'upper')));
 function pad(inst) {
   S.message = '';
-  if (S.score.staff && S.score.staff.type === 'single') inst = S.score.staff.inst;
+  if (singleActive()) { const k = S.score.staff.inst; inst = k === 'agogo' ? (inst === 'agogoLo' ? 'agogoLo' : 'agogoHi') : k; }
   if (S.chord) {
     const target = S.selection || markerTarget();
     if (!target || !evAt(target)) { msg('Toque numa nota da pauta para somar instrumentos a ela'); return; }
@@ -1974,7 +2065,7 @@ function deleteMeasure(i) {
   const m = Math.min(i, S.score.measures.length - 1);
   S.cursor = { m, i: visibleEvents(S.score.measures[m]).length }; render();
 }
-const isEmptyMeasure = m => !m.simile && !m.events.length && !hasText(m.textBefore) && !m.label;
+const isEmptyMeasure = m => !m.simile && !m.events.length && !(m.alt && m.alt.length) && !hasText(m.textBefore) && !m.label;
 function eraseEmptyMeasures() {
   const empty = S.score.measures.filter(isEmptyMeasure).length;
   if (!empty) { flash('Não há compassos vazios para apagar'); return; }
@@ -2044,6 +2135,8 @@ function applyMeasure(i, time, follow, extra) {
       if (j > i && (!follow || !sameTime(s.measures[j].time, old))) break;
       s.measures[j].time = { ...time };
       while (fcmp(s.measures[j].events.reduce((a, e) => fadd(a, dur(e)), ZERO), cap(time)) > 0) { s.measures[j].events.pop(); trimmed = true; }
+      const alt = s.measures[j].alt || [];
+      while (fcmp(alt.reduce((a, e) => fadd(a, dur(e)), ZERO), cap(time)) > 0) { alt.pop(); trimmed = true; }
     }
     Object.assign(s.measures[i], extra);
     if (i === 0) s.measures[0].simile = false;
@@ -2083,10 +2176,13 @@ function buildPalette() {
     const b = e.target.closest('button'); if (!b) return;
     if (b.id === 'restBtn') restAction(); else pad(b.dataset.inst);
   });
-  $('#singleInst').innerHTML = PAD_ORDER.map(k => `<option value="${k}">${INST[k].name}</option>`).join('');
-  $('#singleNote').onclick = () => pad(S.score.staff.inst);
+  $('#singleInst').innerHTML = STAFF_INSTS.map(k => `<option value="${k}">${staffInstName(k)}</option>`).join('');
+  $('#singleNote').onclick = () => pad(S.score.staff.inst === 'agogo' ? 'agogoHi' : S.score.staff.inst);
+  $('#singleNote2').onclick = () => pad('agogoLo');
+  $('#segUp').onclick = () => switchStaff('upper');
+  $('#segKit').onclick = () => switchStaff('kit');
   $('#singleRest').onclick = restAction;
-  $('#singleInst').onchange = e => setStaff('single', e.target.value);
+  $('#singleInst').onchange = e => setStaff(S.score.staff.type === 'both' ? 'both' : 'single', e.target.value);
 
   segButtons($('#g-accent'), [['none', '—', 'Sem acento'], ['accent', '>', 'Acento'], ['marcato', '^', 'Marcato']]);
   segButtons($('#g-ghost'), [['0', 'Normal'], ['1', '( ) Fantasma']]);
@@ -2173,18 +2269,26 @@ function renderStatus() {
   if (S.eraser) { st.textContent = S.eraseWhat === 'text' ? 'Toque num texto, anotação ou nome de seção para apagar' : S.eraseWhat === 'notes' ? 'Toque num compasso para apagar as notas (o compasso fica na pauta)' : 'Toque num compasso para tirá-lo da pauta (os vazios estão marcados)'; return; }
   const i = curMeasure(), m = S.score.measures[i];
   const sel = evAt(S.selection);
-  const head = `Comp. ${i + 1}/${S.score.measures.length} · ${timeLabel(m.time)}`;
+  const head = (isBoth(S.score) ? (S.score.staff.active === 'upper' ? (S.score.staff.inst === 'agogo' ? 'Agogô' : staffInstName(S.score.staff.inst)) : 'Bateria') + ' · ' : '') + `Comp. ${i + 1}/${S.score.measures.length} · ${timeLabel(m.time)}`;
   if (sel) { st.innerHTML = ''; st.append(head + ' · '); const b = document.createElement('b'); b.textContent = describe(sel); st.append(b); return; }
   st.textContent = m.simile ? `${head} · repete o anterior (%)` : `${head} · ${beatsTxt(filled(m), m.time.unit)} de ${m.time.beats} tempos`;
 }
 
 function renderPalette() {
   renderStatus();
-  const single = !!(S.score.staff && S.score.staff.type === 'single');
+  const single = singleActive(), both = isBoth(S.score);
   $('#pads').hidden = single; $('#singlePads').hidden = !single; $('#chordBtn').hidden = single;
+  $('#staffSeg').hidden = !both; $('#pal').classList.toggle('both', both);
+  if (both) {
+    $('#segUp').textContent = (S.score.staff.inst === 'agogo' ? 'Agogô' : staffInstName(S.score.staff.inst)) + ' (1 linha)';
+    $('#segUp').classList.toggle('on', S.score.staff.active === 'upper'); $('#segKit').classList.toggle('on', S.score.staff.active !== 'upper');
+  }
   if (single) {
-    const k = S.score.staff.inst, b = $('#singleNote');
-    b.className = 'pad big ' + INST[k].cat; b.textContent = '♪  ' + INST[k].name; b.setAttribute('aria-label', 'Escrever nota: ' + INST[k].name);
+    const k = S.score.staff.inst, pair = k === 'agogo', b = $('#singleNote'), b2 = $('#singleNote2');
+    const k1 = pair ? 'agogoHi' : k;
+    b.className = 'pad big ' + INST[k1].cat; b.textContent = '♪  ' + INST[k1].name; b.setAttribute('aria-label', 'Escrever nota: ' + INST[k1].name);
+    b2.hidden = !pair; $('#singlePads').classList.toggle('pair', pair);
+    if (pair) { b2.className = 'pad big ' + INST.agogoLo.cat; b2.textContent = '♪  ' + INST.agogoLo.name; b2.setAttribute('aria-label', 'Escrever nota: Agogô grave'); }
     $('#singleInst').value = k;
   }
   $('#pal').classList.toggle('collapsed', S.collapsed);
@@ -2227,11 +2331,10 @@ function renderScore() {
   const W = host.clientWidth || 360;
   const sp = Math.max(5.2, Math.min(9, W / 50, window.innerHeight / 52)) * ZOOMS[S.zoom], margin = W < 520 ? 12 : 10;
   const dpr = Math.min(3, window.devicePixelRatio || 1);
-  const systems = layoutSystems(sc, W - 2 * margin, sp, margin);
+  const systems = layoutRows(sc, W - 2 * margin, sp, margin);
   systemsCache = systems;
   while (host.children.length > systems.length) host.lastChild.remove();
   systems.forEach((s, i) => {
-    s.y = s.topPad;
     let w = host.children[i];
     if (!w) {
       w = document.createElement('div'); w.className = 'sysw';
@@ -2254,7 +2357,7 @@ function renderScore() {
     const ctx = c.getContext('2d');
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     ctx.fillStyle = PAPER; ctx.fillRect(0, 0, W, h);
-    drawSystem(ctx, sc, s, { editor: true, selection: S.selection, cursor: S.cursor, isFirst: i === 0, playing: S.playRef, eraser: S.eraser ? S.eraseWhat : false });
+    drawRow(ctx, sc, s, 0, { editor: true, selection: S.selection, cursor: S.cursor, isFirst: i === 0, playing: S.playRef, eraser: S.eraser ? S.eraseWhat : false });
   });
 }
 function render() { renderScore(); renderPalette(); }
@@ -2273,10 +2376,16 @@ $('#systems').addEventListener('click', e => {
     openText({ mode: 'block', m: +tb.dataset.m }); return;
   }
   const c = e.target.closest('canvas'); if (!c) return;
-  const s = systemsCache[+c.dataset.idx]; if (!s) return;
+  const row = systemsCache[+c.dataset.idx]; if (!row) return;
   const r = c.getBoundingClientRect();
-  const hit = hitTest(e.clientX - r.left, s); if (!hit) return;
   if (Player.playing) stopPlayback();
+  let s = row.s;
+  if (row.kind === 'two') {
+    const which = rowStaffAt(row, e.clientY - r.top);
+    if (which !== S.score.staff.active) switchStaff(which);
+    s = which === 'upper' ? row.up : row.kit;
+  }
+  const hit = hitTest(e.clientX - r.left, s); if (!hit) return;
   if (S.eraser && S.eraseWhat === 'text') { eraseTextAt(hit); return; }
   if (S.eraser && S.eraseWhat === 'notes') {
     const mi = hit.ref.m, m = S.score.measures[mi];
@@ -2505,12 +2614,12 @@ function openInfo() {
   $('#fStick').value = s.sticking; $('#fPerLine').value = String(s.perLine); $('#fPaper').value = s.paper;
   $('#fMargin').value = String(s.pageMargin || 1.4);
   const st = s.staff || { type: 'kit', inst: 'snare' };
-  if (!$('#fStaffInst').options.length) $('#fStaffInst').innerHTML = PAD_ORDER.map(k => `<option value="${k}">${INST[k].name}</option>`).join('');
-  $('#fStaff').value = st.type; $('#fStaffInst').value = st.inst; $('#fStaffInstRow').hidden = st.type !== 'single';
+  if (!$('#fStaffInst').options.length) $('#fStaffInst').innerHTML = STAFF_INSTS.map(k => `<option value="${k}">${staffInstName(k)}</option>`).join('');
+  $('#fStaff').value = st.type; $('#fStaffInst').value = st.inst; $('#fStaffInstRow').hidden = st.type === 'kit';
   openSheet('#infoSheet');
 }
 $('#titleBtn').onclick = openInfo;
-$('#fStaff').onchange = e => { $('#fStaffInstRow').hidden = e.target.value !== 'single'; };
+$('#fStaff').onchange = e => { $('#fStaffInstRow').hidden = e.target.value === 'kit'; if (e.target.value === 'both' && $('#fStaffInst').value === 'snare') $('#fStaffInst').value = 'agogo'; };
 $('#paperHead').onclick = openInfo;
 $('#paperHead').onkeydown = e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openInfo(); } };
 $('#infoSave').onclick = () => {
@@ -2529,7 +2638,7 @@ $('#infoSave').onclick = () => {
 };
 $('#legend').innerHTML = Object.keys(INST).map(k => {
   const h = { n: '●', x: 'x', cx: '⊗', diam: '◆', tri: '▲', slash: '● cortada' }[INST[k].head];
-  const pos = { 11: 'acima, 2ª suplementar', 10: '1ª linha suplementar', 9: 'acima da 5ª linha', 8: '5ª linha', 7: '4º espaço', 6: '4ª linha', 5: '3º espaço', 4: '3ª linha', 3: '2º espaço', 2: '2ª linha', 1: '1º espaço', '-1': 'abaixo da pauta', '-2': 'linha suplementar abaixo' }[INST[k].step];
+  const pos = { 11: 'acima, 2ª suplementar', 10: '1ª linha suplementar', 9: 'acima da 5ª linha', 8: '5ª linha', 7: '4º espaço', 6: '4ª linha', 5: '3º espaço', 4: '3ª linha', 3: '2º espaço', 2: '2ª linha', 1: '1º espaço', '-1': 'abaixo da pauta', '-2': 'linha suplementar abaixo', 12: '2ª linha suplementar acima' }[INST[k].step];
   const extra = k === 'hiHatOpen' ? ' com “o”' : k === 'hiHatHalf' ? ' com “ø”' : '';
   return `<span>${INST[k].name}</span><span>${h}${extra} · ${pos}</span>`;
 }).join('');
