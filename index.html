@@ -339,6 +339,7 @@ button { cursor: pointer; -webkit-tap-highlight-color: transparent; touch-action
         <div class="opt"><span class="k">Acento</span><div class="seg" id="g-accent"></div></div>
         <div class="opt"><span class="k">Fantasma</span><div class="seg" id="g-ghost"></div></div>
         <div class="opt"><span class="k">Manulação</span><div class="seg" id="g-stick"></div></div>
+        <div class="opt"><span class="k">Haste</span><div class="seg" id="g-stem"></div></div>
         <div class="opt"><span class="k">Ornamento</span><div class="seg" id="g-orn"></div></div>
         <div class="opt"><span class="k">Quiáltera</span><div class="seg" id="g-tup"></div></div>
         <div class="sect">Só na nota selecionada</div>
@@ -361,6 +362,7 @@ button { cursor: pointer; -webkit-tap-highlight-color: transparent; touch-action
           <button id="b-rs">Início ‖:</button>
           <button id="b-re">Fim :‖</button>
           <button id="b-clear">Apagar notas (fica o compasso)</button>
+          <button id="b-stems">Inverter hastes do compasso</button>
           <button class="danger" id="b-del">Excluir compasso</button>
           <button class="danger" id="b-empty">Apagar compassos vazios</button>
         </div>
@@ -413,6 +415,7 @@ button { cursor: pointer; -webkit-tap-highlight-color: transparent; touch-action
       <div class="field"><label for="fMetro">Metrônomo junto</label><input type="checkbox" id="fMetro"></div>
       <div class="field"><label for="fCount">Contagem de um compasso antes</label><input type="checkbox" id="fCount"></div>
       <div class="field"><label for="fLoop">Repetir sem parar</label><input type="checkbox" id="fLoop"></div>
+      <div class="field"><label for="fKit">Timbre da bateria</label><select id="fKit"></select></div>
       <div class="field"><label for="fHuman">Variação humana<small>Pequenas diferenças de tempo e força, como um baterista de verdade</small></label><input type="checkbox" id="fHuman"></div>
       <div class="field"><label for="fRoom">Ambiência de sala</label><input type="checkbox" id="fRoom"></div>
     </div>
@@ -428,7 +431,7 @@ button { cursor: pointer; -webkit-tap-highlight-color: transparent; touch-action
       <div class="field"><label for="fPaper">Papel</label><select id="fPaper"><option value="a4">A4</option><option value="letter">Carta (Letter)</option></select></div>
     </div>
     <div class="group"><h3>Legenda dos instrumentos</h3><div class="legend" id="legend"></div></div>
-    <p class="hint">Sons de bateria: AVL Drumkits “Black Pearl”, de Glen MacArthur (bandshed.net), licença CC BY-SA 3.0. MP3 codificado com LAME (lamejs, licença LGPL).</p>
+    <p class="hint">Sons de bateria: Estúdio — SM Drums “Deeply Sampled Free Drums” (Scott McLean, Tod Stillwell, Suleiman Ali), domínio público. Jazz, agogô e cowbell — Virtuosity Drums, Versilian Studios, CC0. Rock — AVL Drumkits “Black Pearl”, de Glen MacArthur (bandshed.net), CC BY-SA 3.0. MP3 codificado com LAME (lamejs, licença LGPL).</p>
   </div></div>
 </div>
 
@@ -520,8 +523,9 @@ button { cursor: pointer; -webkit-tap-highlight-color: transparent; touch-action
 <div class="sheet" id="audioSheet" hidden>
   <div class="sheet-bar"><div class="gut"><button class="icon" data-close aria-label="Voltar"><svg viewBox="0 0 24 24"><path d="m15 18-6-6 6-6"/></svg></button><h2>Ritmo em MP3</h2><button class="btn primary" id="genMp3">Gerar MP3</button></div></div>
   <div class="gut"><div class="sheet-body">
-    <p class="hint">Gera o ritmo da partitura com sons gravados de uma bateria acústica: bumbo, caixa, tons, chimbal e pratos, com acentos, notas fantasma, dinâmicas e repetições.</p>
+    <p class="hint">Gera o ritmo da partitura com sons gravados de uma bateria acústica, em estéreo, com várias intensidades e variações de cada toque, acentos, notas fantasma, dinâmicas e repetições.</p>
     <div class="group"><h3>Como gerar</h3>
+      <div class="field"><label for="aKit">Timbre da bateria</label><select id="aKit"></select></div>
       <div class="field"><label for="aBpm">Andamento (BPM)</label><input type="number" id="aBpm" min="20" max="300" inputmode="numeric"></div>
       <div class="field"><label for="aReps">Tocar a partitura</label><select id="aReps"><option value="1">1 vez</option><option value="2">2 vezes</option><option value="4">4 vezes</option><option value="8">8 vezes</option></select></div>
       <div class="field"><label for="aCount">Contagem de um compasso antes</label><input type="checkbox" id="aCount"></div>
@@ -536,7 +540,7 @@ button { cursor: pointer; -webkit-tap-highlight-color: transparent; touch-action
       <div class="field"><audio id="audioPlayer" controls preload="metadata"></audio></div>
       <div class="field"><label id="audioInfo"></label><button class="btn primary" id="sendMp3">Enviar MP3</button></div>
     </div>
-    <p class="hint">Sons: AVL Drumkits “Black Pearl”, de Glen MacArthur (bandshed.net), licença CC BY-SA 3.0. MP3 codificado com LAME (lamejs, LGPL).</p>
+    <p class="hint">Sons gravados de baterias acústicas: SM Drums (domínio público), Virtuosity Drums (CC0) e AVL Drumkits (CC BY-SA 3.0). MP3 codificado com LAME (lamejs, LGPL).</p>
   </div></div>
 </div>
 
@@ -789,7 +793,7 @@ function layoutSystems(score, width, sp, originX, opts) {
   if (cur.length) lines.push(cur);
   return lines.map(line => {
     let x = originX + clefW;
-    let hasAcc = false, hasTup = false, hasStk = false, hasDyn = false, hasLabel = false, hasVolta = false, hasTimes = false, hasNoteText = false;
+    let hasAcc = false, hasTup = false, hasStk = false, hasDyn = false, hasLabel = false, hasVolta = false, hasTimes = false, hasNoteText = false, hasDown = false;
     const measures = line.map(i => {
       const inf = infos[i], m = ms[i], x0 = x;
       if (m.label) hasLabel = true;
@@ -810,6 +814,7 @@ function layoutSystems(score, width, sp, originX, opts) {
         if (!isRest(e) && e.sticking !== 'none') hasStk = true;
         if (e.dyn) hasDyn = true;
         if (e.text) hasNoteText = true;
+        if (e.stem === 'down' && !isRest(e)) hasDown = true;
         return le;
       });
       const contentEnd = contentX + contentW;
@@ -819,8 +824,9 @@ function layoutSystems(score, width, sp, originX, opts) {
     });
     const basePad = hasTup ? sp * 8.5 : hasAcc ? sp * 7 : hasTimes ? sp * 6.2 : sp * 5.5;
     const topPad = basePad + (hasNoteText ? sp * 2.4 : 0) + (hasVolta ? sp * 2.4 : 0) + (hasLabel ? sp * 2.8 : 0);
-    const stkY = 6.4, dynY = hasStk ? 8.8 : 6.6;
-    const bottomPad = hasDyn ? sp * (dynY + 2.2 - 4) : hasStk ? sp * 7 : sp * 3.5;
+    const low = hasDown ? 3.4 : 0;   // hastes para baixo ocupam espaço embaixo da pauta
+    const stkY = 6.4 + low, dynY = hasStk ? stkY + 2.4 : 6.6 + low;
+    const bottomPad = hasDyn ? sp * (dynY + 2.2 - 4) : hasStk ? sp * (stkY + 0.6) : sp * (3.5 + low);
     return { y: 0, sp, x0: originX, x1: x, measures, topPad, basePad, bottomPad, height: topPad + 4 * sp + bottomPad,
       hasVolta, hasLabel, hasNoteText, stkY, dynY, textBefore: ms[line[0]].textBefore || null, firstMeasure: line[0] };
   });
@@ -1005,8 +1011,9 @@ function drawSystem(ctx, score, s, o) {
       for (const g of beamGroups(m)) {
         if (g.length < 2) continue;
         const maxB = Math.max(...g.map(i => beamCount(m.events[i].value)));
-        const minTop = Math.min(...g.map(i => geos[i].topY));
-        const tip = minTop - 3.5 * sp - Math.max(0, maxB - 2) * sp * 0.8;
+        const down = !!geos[g[0]].down, extra = Math.max(0, maxB - 2) * sp * 0.8;
+        g.forEach(i => setDir(geos[i], down, m.events[i].value));
+        const tip = down ? Math.max(...g.map(i => geos[i].bottomY)) + 3.5 * sp + extra : Math.min(...g.map(i => geos[i].topY)) - 3.5 * sp - extra;
         g.forEach(i => { geos[i].tip = tip; geos[i].beamed = true; });
         bgs.push(g);
       }
@@ -1014,7 +1021,7 @@ function drawSystem(ctx, score, s, o) {
         const e = m.events[i];
         if (geos[i]) {
           drawNote(e, geos[i]);
-          placed[lm.index + ':' + i] = { headX: le.headX, notes: geos[i].notes.map(p => ({ inst: p.n.inst, x: p.x, y: p.y })) };
+          placed[lm.index + ':' + i] = { headX: le.headX, down: !!geos[i].down, notes: geos[i].notes.map(p => ({ inst: p.n.inst, x: p.x, y: p.y })) };
         } else drawRest(e.value, e.dots, le.headX);
         if (e.dyn) drawDyn(e.dyn, le.headX + hw / 2);
         if (e.text) { ink(); text(e.text, `italic ${sp * 1.4}px Georgia, "Times New Roman", serif`, le.headX, top - s.basePad - sp * 1.0, 'left'); }
@@ -1066,6 +1073,13 @@ function drawSystem(ctx, score, s, o) {
     dot(cxs + sp * 0.95, top + 2.65 * sp, sp * 0.33);
   }
 
+  function setDir(g, down, value) {
+    g.down = down;
+    g.stemX = down ? g.headX + stemW / 2 : g.headX + hw - stemW / 2;
+    const extra = Math.max(0, beamCount(value) - 2) * sp * 0.8;
+    g.tip = down ? g.bottomY + 3.5 * sp + extra : g.topY - 3.5 * sp - extra;
+    return g;
+  }
   function geom(e, headX) {
     const sorted = [...e.notes].sort((a, b) => stepOf(a.inst) - stepOf(b.inst));
     let prev = null, prevRight = false, anyRight = false;
@@ -1078,8 +1092,7 @@ function drawSystem(ctx, score, s, o) {
     });
     const ys = notes.map(p => p.y);
     const topY = Math.min(...ys), bottomY = Math.max(...ys);
-    return { headX, notes, topY, bottomY, stemX: headX + hw - stemW / 2,
-             tip: topY - 3.5 * sp - Math.max(0, beamCount(e.value) - 2) * sp * 0.8, beamed: false, anyRight };
+    return setDir({ headX, notes, topY, bottomY, beamed: false, anyRight }, e.stem === 'down', e.value);
   }
 
   function drawNote(e, g) {
@@ -1102,13 +1115,14 @@ function drawSystem(ctx, score, s, o) {
       }
     }
     if (e.value !== 1) {
-      seg(g.stemX, g.bottomY - sp * 0.15, g.stemX, g.tip, stemW);
-      if (!g.beamed && beamCount(e.value)) flags(beamCount(e.value), g.stemX, g.tip);
+      if (g.down) seg(g.stemX, g.topY + sp * 0.15, g.stemX, g.tip, stemW);
+      else seg(g.stemX, g.bottomY - sp * 0.15, g.stemX, g.tip, stemW);
+      if (!g.beamed && beamCount(e.value)) flags(beamCount(e.value), g.stemX, g.tip, g.down);
     }
     for (const kind of ['hiHatOpen', 'hiHatHalf']) {
       const p = g.notes.find(q => q.n.inst === kind);
       if (!p) continue;
-      const cy = (e.value !== 1 ? g.tip : p.y - sp * 1.5) - sp * 0.9, r = sp * 0.38;
+      const cy = (e.value !== 1 && !g.down ? g.tip : g.topY - sp * 0.6) - sp * 0.9, r = sp * 0.38;
       ctx.lineWidth = sp * 0.13; ctx.beginPath(); ctx.arc(p.x + hw / 2, cy, r, 0, TAU); ctx.stroke();
       if (kind === 'hiHatHalf') seg(p.x + hw / 2 - r * 1.3, cy + r * 1.3, p.x + hw / 2 + r * 1.3, cy - r * 1.3, sp * 0.13);
     }
@@ -1122,7 +1136,7 @@ function drawSystem(ctx, score, s, o) {
       const main = g.notes.find(p => !isFoot(p.n.inst)) || g.notes[0];
       grace(e.ornament === 'flam' ? 1 : 2, main);
     } else if (e.ornament === 'buzz') {
-      const ym = e.value !== 1 ? (g.tip + g.bottomY) / 2 - sp * 0.3 : g.topY - sp * 1.6;
+      const ym = e.value !== 1 ? (g.down ? (g.tip + g.topY) / 2 + sp * 0.3 : (g.tip + g.bottomY) / 2 - sp * 0.3) : g.topY - sp * 1.6;
       const sx = e.value !== 1 ? g.stemX : g.headX + hw / 2;
       ctx.lineWidth = sp * 0.16; ctx.beginPath();
       ctx.moveTo(sx - sp * 0.5, ym - sp * 0.4); ctx.lineTo(sx + sp * 0.5, ym - sp * 0.4);
@@ -1130,7 +1144,7 @@ function drawSystem(ctx, score, s, o) {
     } else if (e.ornament && e.ornament.startsWith('trem')) {
       const n = +e.ornament.slice(4);
       const sx = e.value !== 1 ? g.stemX : g.headX + hw / 2;
-      const mid = e.value !== 1 ? (g.beamed || beamCount(e.value) ? g.topY - sp * 1.4 : (g.tip + g.topY) / 2) : g.topY - sp * 2;
+      const mid = e.value !== 1 ? (g.down ? (g.beamed || beamCount(e.value) ? g.bottomY + sp * 1.4 : (g.tip + g.bottomY) / 2) : (g.beamed || beamCount(e.value) ? g.topY - sp * 1.4 : (g.tip + g.topY) / 2)) : g.topY - sp * 2;
       for (let k = 0; k < n; k++) {
         const y = mid + (k - (n - 1) / 2) * sp * 0.8;
         ctx.beginPath();
@@ -1152,10 +1166,11 @@ function drawSystem(ctx, score, s, o) {
   function drawTies() {
     ink();
     ctx.lineWidth = sp * 0.14;
-    const curve = (x1, x2, y) => {
+    const curve = (x1, x2, y, up) => {
+      const d = up ? -1 : 1;
       ctx.beginPath(); ctx.moveTo(x1, y);
-      ctx.bezierCurveTo(x1 + (x2 - x1) * 0.25, y + sp * 1.1, x1 + (x2 - x1) * 0.75, y + sp * 1.1, x2, y);
-      ctx.bezierCurveTo(x1 + (x2 - x1) * 0.75, y + sp * 0.8, x1 + (x2 - x1) * 0.25, y + sp * 0.8, x1, y);
+      ctx.bezierCurveTo(x1 + (x2 - x1) * 0.25, y + d * sp * 1.1, x1 + (x2 - x1) * 0.75, y + d * sp * 1.1, x2, y);
+      ctx.bezierCurveTo(x1 + (x2 - x1) * 0.75, y + d * sp * 0.8, x1 + (x2 - x1) * 0.25, y + d * sp * 0.8, x1, y);
       ctx.fill();
     };
     const nextRef = (m, i) => {
@@ -1171,9 +1186,9 @@ function drawSystem(ctx, score, s, o) {
       const nextEv = nk ? score.measures[+nk.split(':')[0]].events[+nk.split(':')[1]] : null;
       for (const p of a.notes) {
         if (nextEv && !nextEv.notes.some(n => n.inst === p.inst)) continue;
-        const y = p.y + sp * 0.75;
-        if (b) { const q = b.notes.find(n => n.inst === p.inst); if (q) curve(p.x + hw * 0.85, q.x + hw * 0.15, y); }
-        else curve(p.x + hw * 0.85, Math.min(s.x1 - sp * 0.3, p.x + hw + sp * 4), y);
+        const y = a.down ? p.y - sp * 0.75 : p.y + sp * 0.75;
+        if (b) { const q = b.notes.find(n => n.inst === p.inst); if (q) curve(p.x + hw * 0.85, q.x + hw * 0.15, y, a.down); }
+        else curve(p.x + hw * 0.85, Math.min(s.x1 - sp * 0.3, p.x + hw + sp * 4), y, a.down);
       }
     }
     // ligadura que chega do sistema anterior
@@ -1186,7 +1201,7 @@ function drawSystem(ctx, score, s, o) {
         while (pi < 0 && pm > 0) { pm--; pi = visibleEvents(score.measures[pm]).length - 1; }
         const prev = pi >= 0 ? score.measures[pm].events[pi] : null;
         if (prev && prev.tie && !placed[pm + ':' + pi]) {
-          for (const q of placed[fk].notes) if (prev.notes.some(n => n.inst === q.inst)) curve(Math.max(first.contentX - sp * 3, s.x0 + sp * 3.2), q.x + hw * 0.15, q.y + sp * 0.75);
+          for (const q of placed[fk].notes) if (prev.notes.some(n => n.inst === q.inst)) curve(Math.max(first.contentX - sp * 3, s.x0 + sp * 3.2), q.x + hw * 0.15, placed[fk].down ? q.y - sp * 0.75 : q.y + sp * 0.75, placed[fk].down);
         }
       }
     }
@@ -1227,23 +1242,24 @@ function drawSystem(ctx, score, s, o) {
     ctx.stroke();
   }
 
-  function flags(n, sx, tip) {
+  function flags(n, sx, tip, down) {
+    const d = down ? -1 : 1;   // para baixo: bandeirola espelhada, subindo a partir da ponta
     for (let k = 0; k < n; k++) {
-      const y0 = tip + k * sp * 0.85;
+      const y0 = tip + d * k * sp * 0.85;
       ctx.beginPath(); ctx.moveTo(sx, y0);
-      ctx.bezierCurveTo(sx + sp * 0.15, y0 + sp * 1.2, sx + sp * 1.4, y0 + sp * 1.5, sx + sp * 1.0, y0 + sp * 2.7);
-      ctx.bezierCurveTo(sx + sp * 0.9, y0 + sp * 1.9, sx + sp * 0.3, y0 + sp * 1.4, sx, y0 + sp * 0.9);
+      ctx.bezierCurveTo(sx + sp * 0.15, y0 + d * sp * 1.2, sx + sp * 1.4, y0 + d * sp * 1.5, sx + sp * 1.0, y0 + d * sp * 2.7);
+      ctx.bezierCurveTo(sx + sp * 0.9, y0 + d * sp * 1.9, sx + sp * 0.3, y0 + d * sp * 1.4, sx, y0 + d * sp * 0.9);
       ctx.closePath(); ctx.fill();
     }
   }
 
   function drawBeams(g, events, geos) {
-    const tip = geos[g[0]].tip, xs = g.map(i => geos[i].stemX);
+    const tip = geos[g[0]].tip, xs = g.map(i => geos[i].stemX), down = !!geos[g[0]].down;
     const thick = sp * 0.5, gap = sp * 0.75;
     const maxL = Math.max(...g.map(i => beamCount(events[i].value)));
     ink();
     for (let level = 1; level <= maxL; level++) {
-      const yy = tip + (level - 1) * gap;
+      const yy = down ? tip - thick - (level - 1) * gap : tip + (level - 1) * gap;
       let run = null;
       for (let k = 0; k < g.length; k++) {
         const has = beamCount(events[g[k]].value) >= level;
@@ -1276,7 +1292,7 @@ function drawSystem(ctx, score, s, o) {
       const first = idx[0], last = idx[idx.length - 1];
       const x1 = lm.events[first].headX;
       const x2 = geos[last] ? geos[last].stemX : lm.events[last].headX + hw;
-      const tips = idx.filter(i => geos[i]).map(i => geos[i].tip);
+      const tips = idx.filter(i => geos[i]).map(i => geos[i].down ? geos[i].topY - sp * 0.6 : geos[i].tip);
       const hasAcc = idx.some(i => !isRest(m.events[i]) && m.events[i].accent !== 'none');
       let yy = (tips.length ? Math.min(...tips) : top - 3.5 * sp) - sp * 1.2;
       if (hasAcc) yy = Math.min(yy, top - 7.3 * sp);
@@ -1466,21 +1482,32 @@ const SOUND = {
   crossStick: [['n', { f: 2600, type: 'bandpass', q: 5, d: 0.05, g: 1.2 }]], bass: [['t', { f0: 125, f1: 46, d: 0.38, g: 1.3 }]]
 };
 // Mixagem (volume relativo) e posição no estéreo, do ponto de vista do baterista
-const MIX = { cowbellFoot: 0.3, bass: 1.0, snare: 0.85, rimshot: 0.85, crossStick: 0.7, hiHat: 0.6, hiHatPedal: 0.5, hiHatHalf: 0.55, hiHatOpen: 0.55,
+const MIX = { agogoHi: 0.45, agogoLo: 0.45, cowbellFoot: 0.3, bass: 1.0, snare: 0.85, rimshot: 0.85, crossStick: 0.7, hiHat: 0.6, hiHatPedal: 0.5, hiHatHalf: 0.55, hiHatOpen: 0.55,
   ride: 0.5, rideBell: 0.45, crash: 0.55, splash: 0.5, china: 0.5, cowbell: 0.35, tom1: 0.78, tom2: 0.8, tom3: 0.82, floorTom: 0.85, floorTom2: 0.85 };
 const PAN = { cowbellFoot: -0.45, bass: 0, snare: -0.18, rimshot: -0.18, crossStick: -0.18, hiHat: -0.38, hiHatPedal: -0.38, hiHatHalf: -0.38, hiHatOpen: -0.38,
   ride: 0.45, rideBell: 0.45, crash: -0.3, splash: -0.14, china: -0.5, cowbell: 0.3, tom1: -0.1, tom2: 0.08, tom3: 0.2, floorTom: 0.4, floorTom2: 0.52 };
 const HATS = ['hiHat', 'hiHatPedal', 'hiHatHalf', 'hiHatOpen'];
-const Kit = { buf: null, loading: null };
+// Timbres disponíveis. 'pearl' é o kit anterior (mono, kit-samples.js); os outros são pacotes estéreo
+// (um .json com o mapa e um .mp3 com todas as amostras em sequência).
+const KITS = {
+  estudio: { label: 'Estúdio — Ludwig vintage', json: 'kit-estudio.json' },
+  jazz: { label: 'Jazz — kit de jazz (Versilian)', json: 'kit-jazz.json' },
+  pearl: { label: 'Rock — Pearl (som anterior)', legacy: true }
+};
+const Kit = { id: null, inst: null, stereo: false, loading: {}, packs: {}, perc: null, lastRR: {} };
 const Player = { ctx: null, noise: null, out: null, playing: false, t0: 0, raf: 0, last: '', ir: null };
+const kitId = () => KITS[prefs.kit] ? prefs.kit : 'estudio';
 
 function loadScript(src) {
   return new Promise((res, rej) => { const s = document.createElement('script'); s.src = src; s.onload = res; s.onerror = rej; document.head.appendChild(s); });
 }
+function decodeBuf(ac, buf) {
+  return new Promise((res, rej) => { const p = ac.decodeAudioData(buf, res, rej); if (p && p.then) p.then(res, rej); });
+}
 function decode(ac, b64) {
   const bin = atob(b64), a = new Uint8Array(bin.length);
   for (let i = 0; i < bin.length; i++) a[i] = bin.charCodeAt(i);
-  return new Promise((res, rej) => { const p = ac.decodeAudioData(a.buffer, res, rej); if (p && p.then) p.then(res, rej); });
+  return decodeBuf(ac, a.buffer);
 }
 function onset(buffer) {
   const d = buffer.getChannelData(0); let peak = 0;
@@ -1489,18 +1516,45 @@ function onset(buffer) {
   for (let i = 0; i < d.length; i++) if (Math.abs(d[i]) > th) return Math.max(0, i - 16) / buffer.sampleRate;
   return 0;
 }
+// pacote estéreo: { instruments: { inst: { layers: [{ vel, rr: [[início, tamanho], ...] }] } | { alias, rate, gain } } }
+async function loadPack(ac, jsonUrl) {
+  if (Kit.packs[jsonUrl]) return Kit.packs[jsonUrl];
+  const meta = await (await fetch(jsonUrl)).json();
+  const data = await (await fetch(meta.file)).arrayBuffer();
+  const inst = {};
+  await Promise.all(Object.entries(meta.instruments).map(async ([k, v]) => {
+    if (v.alias) { inst[k] = { alias: v.alias, rate: v.rate || 1, gain: v.gain || 1 }; return; }
+    inst[k] = { layers: await Promise.all(v.layers.map(async L => ({ vel: L.vel, rr: await Promise.all(L.rr.map(async ([o, l]) => {
+      const buffer = await decodeBuf(ac, data.slice(o, o + l)); return { buffer, offset: onset(buffer) };
+    })) }))) };
+  }));
+  return (Kit.packs[jsonUrl] = { inst, stereo: !!meta.stereo, credit: meta.credit });
+}
+async function loadLegacy(ac) {
+  if (Kit.packs.legacy) return Kit.packs.legacy;
+  if (!window.KIT_SAMPLES) await loadScript('kit-samples.js');
+  const inst = {};
+  await Promise.all(Object.entries(window.KIT_SAMPLES).map(async ([k, layers]) => {
+    const n = layers.length;
+    inst[k] = { layers: await Promise.all(layers.map(async (b, i) => { const buffer = await decode(ac, b); return { vel: n === 1 ? 1 : n === 2 ? [0.5, 1][i] : [0.4, 0.9, 1][i], rr: [{ buffer, offset: onset(buffer) }] }; })) };
+  }));
+  inst.cowbellFoot = { alias: 'cowbell', rate: 1, gain: 0.6 };
+  return (Kit.packs.legacy = { inst, stereo: false });
+}
+// Carrega o timbre escolhido (e o pacote de percussão com agogô) e deixa pronto para tocar
 function ensureKit(ac) {
-  if (Kit.buf) return Promise.resolve(Kit.buf);
-  if (!Kit.loading) {
-    Kit.loading = (window.KIT_SAMPLES ? Promise.resolve() : loadScript('kit-samples.js')).then(async () => {
-      const out = {};
-      await Promise.all(Object.entries(window.KIT_SAMPLES).map(async ([k, layers]) => {
-        out[k] = await Promise.all(layers.map(async b => { const buffer = await decode(ac, b); return { buffer, offset: onset(buffer) }; }));
-      }));
-      Kit.buf = out; return out;
-    }).catch(e => { Kit.loading = null; throw e; });
+  const id = kitId();
+  if (Kit.id === id && Kit.inst) return Promise.resolve(Kit.inst);
+  if (!Kit.loading[id]) {
+    Kit.loading[id] = Promise.all([
+      KITS[id].legacy ? loadLegacy(ac) : loadPack(ac, KITS[id].json),
+      loadPack(ac, 'kit-perc.json').catch(() => null)
+    ]).then(([pack, perc]) => {
+      if (kitId() === id) { Kit.id = id; Kit.inst = pack.inst; Kit.stereo = pack.stereo; Kit.perc = perc; }
+      return pack.inst;
+    }).catch(e => { delete Kit.loading[id]; throw e; });
   }
-  return Kit.loading;
+  return Kit.loading[id];
 }
 function audio() {
   if (!Player.ctx) {
@@ -1536,20 +1590,37 @@ function voice(ac, dest, kind, p, t, vel) {
   }
   return g;
 }
+function findSound(inst) {
+  let rate = 1, gain = 1, k = inst;
+  const look = (map) => {
+    let e = map && map[k];
+    for (let hop = 0; e && e.alias && hop < 3; hop++) { rate *= e.rate || 1; gain *= e.gain || 1; k = e.alias; e = map[k]; }
+    return e && e.layers ? e : null;
+  };
+  let e = look(Kit.inst), stereo = Kit.stereo;
+  if (!e && Kit.perc) { k = inst; rate = 1; gain = 1; e = look(Kit.perc.inst); stereo = true; }
+  return e ? { e, rate, gain, stereo, key: k } : null;
+}
 // Um toque de um instrumento. vel: 0.15 (fantasma) … 1.3 (ff acentuado). Devolve o ganho (para abafar depois).
 function hit(ac, dest, inst, t, vel, opt) {
   t = Math.max(t, 0);
-  const layers = Kit.buf && Kit.buf[inst === 'cowbellFoot' ? 'cowbell' : inst];
-  if (!layers) { const ps = SOUND[inst] || []; let g = null; ps.forEach(([k, p]) => { g = voice(ac, dest, k, p, t, vel); }); return g; }
-  const n = layers.length;
-  const li = n === 1 ? 0 : n === 2 ? (vel < 0.5 ? 0 : 1) : (vel < 0.4 ? 0 : vel < 0.9 ? 1 : 2);
-  const L = layers[li];
-  const src = ac.createBufferSource(); src.buffer = L.buffer;
-  if (opt && opt.human) src.playbackRate.value = 1 + (Math.random() - 0.5) * 0.012;
-  const g = ac.createGain(); g.gain.value = (0.08 + 0.92 * Math.pow(Math.min(vel, 1.3), 1.5)) * (MIX[inst] || 0.7);
+  const f = findSound(inst);
+  if (!f) { const ps = SOUND[inst] || []; let g = null; ps.forEach(([k, p]) => { g = voice(ac, dest, k, p, t, vel); }); return g; }
+  // camada de intensidade: a primeira cuja intensidade alcança o toque
+  const v = Math.min(1, vel / 1.05), layers = f.e.layers;
+  const L = layers.find(l => l.vel >= v - 0.02) || layers[layers.length - 1];
+  // variação (round robin): sorteia, sem repetir a anterior
+  let ri = Math.floor(Math.random() * L.rr.length);
+  const lastKey = f.key + ':' + layers.indexOf(L);
+  if (L.rr.length > 1 && ri === Kit.lastRR[lastKey]) ri = (ri + 1) % L.rr.length;
+  Kit.lastRR[lastKey] = ri;
+  const smp = L.rr[ri];
+  const src = ac.createBufferSource(); src.buffer = smp.buffer;
+  src.playbackRate.value = f.rate * (opt && opt.human ? 1 + (Math.random() - 0.5) * 0.01 : 1);
+  const g = ac.createGain(); g.gain.value = (0.08 + 0.92 * Math.pow(Math.min(vel, 1.3), 1.5)) * (MIX[inst] || 0.7) * f.gain;
   src.connect(g);
-  if (ac.createStereoPanner) { const p = ac.createStereoPanner(); p.pan.value = PAN[inst] || 0; g.connect(p); p.connect(dest); } else g.connect(dest);
-  src.start(t, L.offset);
+  if (!f.stereo && ac.createStereoPanner) { const p = ac.createStereoPanner(); p.pan.value = PAN[inst] || 0; g.connect(p); p.connect(dest); } else g.connect(dest);
+  src.start(t, smp.offset);
   return g;
 }
 function click(ac, dest, t, strong) { voice(ac, dest, 't', { f0: strong ? 1600 : 1100, d: 0.035, g: strong ? 0.3 : 0.18, w: 'square' }, t, 1); }
@@ -1571,7 +1642,7 @@ function makeBus(ac, room) {
   input.connect(comp);
   if (room) {
     const conv = ac.createConvolver(); conv.buffer = roomIR(ac);
-    const wet = ac.createGain(); wet.gain.value = 0.16;
+    const wet = ac.createGain(); wet.gain.value = Kit.stereo ? 0.07 : 0.16;
     input.connect(conv); conv.connect(wet); wet.connect(comp);
   }
   comp.connect(master); master.connect(ac.destination);
@@ -1674,9 +1745,9 @@ async function startPlayback() {
   Player.playing = true; Player.tl = tl; Player.last = '';
   $('#playBtn').classList.add('on'); $('#playBtn').setAttribute('aria-label', 'Parar');
   $('#playIcon').innerHTML = '<rect x="6" y="6" width="12" height="12" rx="1.5"/>';
-  if (!Kit.buf) {
+  if (Kit.id !== kitId() || !Kit.inst) {
     flash('Carregando os sons da bateria…');
-    try { await Promise.race([ensureKit(ac), new Promise(r => setTimeout(r, 4000))]); } catch (e) {}
+    try { await Promise.race([ensureKit(ac), new Promise(r => setTimeout(r, 9000))]); } catch (e) {}
     if (!Player.playing) return;
   }
   if (from > 0) flash(`Tocando a partir do compasso ${from + 1}`);
@@ -1879,7 +1950,7 @@ function select(r) {
   const e = evAt(r); if (!e) return;
   S.selection = r; S.cursor = { m: r.m, i: r.i + 1 }; S.message = '';
   S.value = e.value; S.dots = e.dots;
-  if (!isRest(e)) { S.accent = e.accent; S.ornament = e.ornament; S.sticking = e.sticking; S.ghost = e.notes.some(n => n.ghost); }
+  if (!isRest(e)) { S.accent = e.accent; S.ornament = e.ornament; S.sticking = e.sticking; S.ghost = e.notes.some(n => n.ghost); S.stem = e.stem === 'down' ? 'down' : 'up'; }
 }
 function setCursor(r) { S.selection = null; S.cursor = r; S.message = ''; clampCursor(); }
 const allRefs = () => S.score.measures.flatMap((m, mi) => visibleEvents(m).map((_, i) => ({ m: mi, i })));
@@ -2000,6 +2071,7 @@ function insert(notes) {
   }
   const ev = { id: uid(), value: S.value, dots: S.dots, notes, tuplet: null, accent: 'none', ornament: 'none', sticking: 'none', tie: false, dyn: '', choke: false };
   if (notes.length) { ev.accent = S.accent; ev.ornament = S.ornament; ev.sticking = S.sticking; }
+  if (S.stem === 'down') ev.stem = 'down';
   if (S.tuplet) {
     const t = tupletFor(S.tuplet, s.measures[m], i, written(ev));
     if (!t) { msg('A quiáltera não cabe neste ponto do compasso'); return; }
@@ -2218,6 +2290,7 @@ function buildPalette() {
 
   segButtons($('#g-accent'), [['none', '—', 'Sem acento'], ['accent', '>', 'Acento'], ['marcato', '^', 'Marcato']]);
   segButtons($('#g-ghost'), [['0', 'Normal'], ['1', '( ) Fantasma']]);
+  segButtons($('#g-stem'), [['up', '↑ Para cima', 'Haste para cima'], ['down', '↓ Para baixo', 'Haste para baixo']]);
   segButtons($('#g-stick'), [['none', '—', 'Sem manulação'], ['R', 'R', 'Mão direita'], ['L', 'L', 'Mão esquerda']]);
   segButtons($('#g-orn'), Object.entries(ORN).map(([k, v]) => [k, k === 'none' ? '—' : v, v]));
   segButtons($('#g-tup'), [['', '—', 'Sem quiáltera'], ['3:2', '3', 'Tercina 3:2'], ['2:3', '2', 'Duína 2:3'], ['4:3', '4', 'Quartina 4:3'], ['5:4', '5', 'Quintina 5:4'], ['6:4', '6', 'Sextina 6:4'], ['7:4', '7', 'Septina 7:4'], ['9:8', '9', 'Novena 9:8']]);
@@ -2226,6 +2299,7 @@ function buildPalette() {
 
   $('#g-accent').onclick = e => { const b = e.target.closest('button'); if (!b) return; const a = b.dataset.v; S.accent = a; modifySelected(ev => { if (!isRest(ev)) ev.accent = a; }); };
   $('#g-ghost').onclick = e => { const b = e.target.closest('button'); if (!b) return; S.ghost = b.dataset.v === '1'; const g = S.ghost; modifySelected(ev => ev.notes.forEach(n => { n.ghost = g; })); };
+  $('#g-stem').onclick = e => { const b = e.target.closest('button'); if (!b) return; const v = b.dataset.v; S.stem = v; modifySelected(ev => { ev.stem = v === 'down' ? 'down' : ''; }); };
   $('#g-stick').onclick = e => { const b = e.target.closest('button'); if (!b) return; const v = b.dataset.v; S.sticking = v; modifySelected(ev => { if (!isRest(ev)) ev.sticking = v; }); };
   $('#g-orn').onclick = e => { const b = e.target.closest('button'); if (!b) return; const o = b.dataset.v; S.ornament = o; modifySelected(ev => { if (!isRest(ev)) ev.ornament = o; }); };
   $('#g-tup').onclick = e => { const b = e.target.closest('button'); if (!b) return; S.tuplet = b.dataset.v; renderPalette(); };
@@ -2268,6 +2342,13 @@ function buildPalette() {
   $('#eraseTexts').onclick = () => setEraser(true, 'text');
   $('#eraseEmpty').onclick = eraseEmptyMeasures;
   $('#b-empty').onclick = eraseEmptyMeasures;
+  $('#b-stems').onclick = () => {
+    const i = curMeasure(), evs = S.score.measures[i].events.filter(e => !isRest(e));
+    if (!evs.length) { flash('Não há notas neste compasso'); return; }
+    const toDown = evs.some(e => e.stem !== 'down');
+    edit(s => s.measures[i].events.forEach(e => { if (!isRest(e)) e.stem = toDown ? 'down' : ''; }));
+    render(); flash(toDown ? `Hastes do compasso ${i + 1} para baixo` : `Hastes do compasso ${i + 1} para cima`);
+  };
   $('#b-clear').onclick = () => { const i = curMeasure(); clearMeasure(i); flash(`Notas do compasso ${i + 1} apagadas. O compasso continua na pauta.`); };
   $('#addEnd').onclick = () => insertMeasure(S.score.measures.length - 1);
   $('#undoBtn').onclick = undo;
@@ -2290,6 +2371,7 @@ function describe(e) {
   if (e.accent !== 'none') parts.push(e.accent === 'accent' ? '>' : '^');
   if (e.ornament !== 'none') parts.push(ORN[e.ornament]);
   if (e.tie) parts.push('ligada');
+  if (e.stem === 'down') parts.push('haste ↓');
   if (e.dyn) parts.push(DYN[e.dyn]);
   if (e.text) parts.push('“' + e.text + '”');
   return parts.join(' · ');
@@ -2329,6 +2411,7 @@ function renderPalette() {
   document.querySelectorAll('#rowValues [data-v]').forEach(b => b.classList.toggle('on', +b.dataset.v === S.value));
   document.querySelectorAll('#rowValues [data-dots]').forEach(b => b.classList.toggle('on', +b.dataset.dots === S.dots));
   const on = (sel, v) => document.querySelectorAll(sel + ' button').forEach(b => b.classList.toggle('on', b.dataset.v === v));
+  on('#g-stem', S.stem === 'down' ? 'down' : 'up');
   on('#g-accent', S.accent); on('#g-ghost', S.ghost ? '1' : '0'); on('#g-stick', S.sticking); on('#g-orn', S.ornament); on('#g-tup', S.tuplet);
   const st = { R: stickTxt(S.score.sticking, 'R'), L: stickTxt(S.score.sticking, 'L') };
   document.querySelectorAll('#g-stick button').forEach(b => { if (st[b.dataset.v]) b.textContent = st[b.dataset.v]; });
@@ -2643,6 +2726,7 @@ function openInfo() {
   $('#fTempoOn').checked = s.tempo > 0; $('#fTempo').value = s.tempo || s.playBpm || 90;
   $('#fMetro').checked = !!pb.metro; $('#fCount').checked = !!pb.countIn; $('#fLoop').checked = !!pb.loop;
   $('#fHuman').checked = prefs.human !== false; $('#fRoom').checked = prefs.room !== false;
+  $('#fKit').value = kitId();
   $('#fStick').value = s.sticking; $('#fPerLine').value = String(s.perLine); $('#fPaper').value = s.paper;
   $('#fMargin').value = String(s.pageMargin || 1.4);
   const st = s.staff || { type: 'kit', inst: 'snare' };
@@ -2652,6 +2736,15 @@ function openInfo() {
   openSheet('#infoSheet');
 }
 $('#titleBtn').onclick = openInfo;
+['#fKit', '#aKit'].forEach(id => { $(id).innerHTML = Object.entries(KITS).map(([k, v]) => `<option value="${k}">${v.label}</option>`).join(''); });
+function setKit(id) {
+  if (!KITS[id] || id === kitId()) return;
+  prefs.kit = id; savePrefs();
+  stopPlayback(); Kit.lastRR = {};
+  if (Player.ctx) ensureKit(Player.ctx).catch(() => {});
+}
+// trocar o timbre na tela de informações já toca um exemplo
+$('#fKit').onchange = e => { setKit(e.target.value); const ac = audio(); if (ac) ensureKit(ac).then(() => { if (!Player.preview) Player.preview = makeBus(ac, false); const t = ac.currentTime + 0.05; [['bass', 0], ['hiHat', 0], ['hiHat', 0.25], ['snare', 0.5], ['hiHat', 0.5], ['hiHat', 0.75], ['bass', 0.75], ['crash', 1]].forEach(([k, d]) => hit(ac, Player.preview.input, k, t + d * 0.6, 0.8, {})); }).catch(() => {}); };
 $('#fStaff').onchange = e => { $('#fStaffInstRow').hidden = e.target.value === 'kit'; $('#fStaffPosRow').hidden = e.target.value !== 'both'; if (e.target.value === 'both' && $('#fStaffInst').value === 'snare') $('#fStaffInst').value = 'agogo'; };
 $('#paperHead').onclick = openInfo;
 $('#paperHead').onkeydown = e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openInfo(); } };
@@ -2665,7 +2758,7 @@ $('#infoSave').onclick = () => {
     s.playback = { metro: $('#fMetro').checked, countIn: $('#fCount').checked, loop: $('#fLoop').checked };
     s.sticking = $('#fStick').value; s.perLine = parseInt($('#fPerLine').value, 10) || 0; s.paper = $('#fPaper').value; s.pageMargin = parseFloat($('#fMargin').value) || 1.4;
   });
-  prefs.human = $('#fHuman').checked; prefs.room = $('#fRoom').checked; savePrefs();
+  prefs.human = $('#fHuman').checked; prefs.room = $('#fRoom').checked; setKit($('#fKit').value); savePrefs();
   setStaff($('#fStaff').value, $('#fStaffInst').value, $('#fStaffPos').value);
   $('#infoSheet').hidden = true; render();
 };
@@ -2741,6 +2834,7 @@ function openAudio() {
   $('#aReps').value = String(prefs.reps || 1);
   $('#aCount').checked = !!pb.countIn; $('#aMetro').checked = !!pb.metro;
   $('#aHuman').checked = prefs.human !== false; $('#aRoom').checked = prefs.room !== false;
+  $('#aKit').value = kitId();
   $('#audioState').textContent = ''; $('#audioState').className = 'pdfstate';
   $('#audioResult').hidden = !lastMp3 || lastMp3.scoreId !== sc.id || lastMp3.modified !== sc.modified;
   $('#audioProg').hidden = true;
@@ -2754,7 +2848,7 @@ $('#genMp3').onclick = async () => {
   const prog = (t, f) => { setSt(t); $('#audioProg').hidden = false; $('#audioBar').style.width = Math.round(f * 100) + '%'; };
   const o = { bpm: Math.max(20, Math.min(300, parseInt($('#aBpm').value, 10) || scoreBpm(S.score))), reps: +$('#aReps').value,
     countIn: $('#aCount').checked, metro: $('#aMetro').checked, human: $('#aHuman').checked, room: $('#aRoom').checked };
-  prefs.reps = o.reps; prefs.human = o.human; prefs.room = o.room; savePrefs();
+  prefs.reps = o.reps; prefs.human = o.human; prefs.room = o.room; setKit($('#aKit').value); savePrefs();
   btn.disabled = true; $('#audioResult').hidden = true;
   try {
     prog('Carregando os sons da bateria…', 0.03);

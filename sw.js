@@ -1,7 +1,8 @@
 // Bateria Score — funciona sem internet depois da primeira abertura.
 // Ao publicar uma versão nova, mude o número abaixo.
-const CACHE = 'bateria-score-v12';
-const FILES = ['./index.html', './manifest.json', './kit-samples.js', './lame.min.js',
+const CACHE = 'bateria-score-v13';
+const FILES = ['./index.html', './manifest.json', './lame.min.js',
+  './kit-estudio.json', './kit-estudio.mp3', './kit-perc.json', './kit-perc.mp3',
   './icon-192.png', './icon-512.png', './apple-touch-icon.png'];
 
 self.addEventListener('install', e => {
@@ -15,7 +16,7 @@ self.addEventListener('activate', e => {
 });
 
 // Página: tenta a rede (pega atualizações), cai para o cache se estiver offline.
-// Demais arquivos: cache primeiro.
+// Demais arquivos (sons, ícones): cache primeiro; o que for baixado depois (outro timbre) fica guardado.
 self.addEventListener('fetch', e => {
   const req = e.request;
   if (req.method !== 'GET' || new URL(req.url).origin !== location.origin) return;
@@ -27,5 +28,8 @@ self.addEventListener('fetch', e => {
     }).catch(() => caches.match('./index.html')));
     return;
   }
-  e.respondWith(caches.match(req).then(hit => hit || fetch(req)));
+  e.respondWith(caches.match(req).then(hit => hit || fetch(req).then(res => {
+    if (res.ok) { const copy = res.clone(); caches.open(CACHE).then(c => c.put(req, copy)); }
+    return res;
+  })));
 });
