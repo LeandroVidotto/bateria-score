@@ -11,9 +11,9 @@
 <meta name="apple-mobile-web-app-title" content="Bateria Score">
 <meta name="theme-color" content="#f8f9fb" media="(prefers-color-scheme: light)">
 <meta name="theme-color" content="#1b1e25" media="(prefers-color-scheme: dark)">
-<link rel="manifest" href="manifest.json">
-<link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
-<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
 <style>
 *, *::before, *::after { box-sizing: border-box; }
 html { color-scheme: light; padding-top: env(safe-area-inset-top, 0px); padding-bottom: env(safe-area-inset-bottom, 0px); background: var(--panel); -webkit-text-size-adjust: 100%; }
@@ -274,6 +274,18 @@ button { cursor: pointer; -webkit-tap-highlight-color: transparent; touch-action
 .hint { font-size: 13.5px; color: var(--muted); line-height: 1.45; margin: 0; }
 .pdfstate { font-size: 13.5px; font-weight: 600; min-height: 18px; }
 .pdfstate.err { color: var(--danger); }
+#refPanel { position: sticky; top: 0; z-index: 6; background: var(--bg); border-bottom: 1px solid var(--line); box-shadow: 0 4px 12px rgba(0,0,0,.06); }
+#refPanel .refbar { display: flex; align-items: center; gap: 8px; padding: 6px max(12px, env(safe-area-inset-left, 0px)); font-size: 13.5px; }
+#refPanel .refbar .sp { flex: 1; }
+#refPanel .refbar button { border: 1px solid var(--line); background: var(--card, #fff); color: inherit; border-radius: 8px; padding: 4px 10px; font-size: 13px; font-weight: 600; }
+#refPanel .refimg { max-height: 30vh; overflow: auto; -webkit-overflow-scrolling: touch; text-align: center; background: #fff; }
+#refPanel.big .refimg { max-height: 62vh; }
+#refPanel.min .refimg { display: none; }
+#refPanel img { display: block; max-width: 100%; margin: 0 auto; cursor: zoom-in; }
+#refPanel.big img { max-width: none; width: 160%; cursor: zoom-out; }
+.impimg img { display: block; max-width: 100%; max-height: 40vh; margin: 0 auto; background: #fff; }
+.impbtns { display: flex; flex-wrap: wrap; gap: 8px; margin: 12px 0 8px; }
+.impbtns .btn { flex: 1 1 auto; }
 @media (prefers-reduced-motion: no-preference) { .chip, .pad, .btn, .seg button { transition: background-color .12s ease; } }
 </style>
 
@@ -292,10 +304,12 @@ button { cursor: pointer; -webkit-tap-highlight-color: transparent; touch-action
   </header>
 
   <main id="desk">
+    <div id="refPanel" hidden><div class="refbar"><b>Referência</b><span class="sp"></span><button id="refToggle">Ocultar</button><button id="refRemove">Remover</button></div><div class="refimg"><img id="refImg" alt="Imagem do ritmo para copiar"></div></div>
     <div class="gut paperwrap">
       <div class="notes">
       <div class="note" id="installNote" hidden><span>Para instalar: toque em <b>Compartilhar</b> e depois em <b>Adicionar à Tela de Início</b>.</span><button id="installClose">Ok</button></div>
       <div class="note" id="exampleNote" hidden><span>Este é um exercício de exemplo. Edite à vontade: ele é salvo como uma partitura sua.</span><button id="newFromNote">Começar do zero</button></div>
+      <div class="note" id="importNote" hidden><span id="importNoteTxt"></span><button id="importNoteOk">OK</button></div>
       </div>
       <div id="paper">
         <div id="paperHead" role="button" tabindex="0" aria-label="Editar título e informações">
@@ -386,9 +400,10 @@ button { cursor: pointer; -webkit-tap-highlight-color: transparent; touch-action
 
 <!-- Biblioteca -->
 <div class="sheet" id="libSheet" hidden>
-  <div class="sheet-bar"><div class="gut"><h2>Minhas partituras</h2><button class="btn primary" id="newScoreBtn">+ Nova</button><button class="icon" data-close aria-label="Fechar"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></svg></button></div></div>
+  <div class="sheet-bar"><div class="gut"><h2>Minhas partituras</h2><button class="btn" id="importBtn">Importar</button><button class="btn primary" id="newScoreBtn">+ Nova</button><button class="icon" data-close aria-label="Fechar"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></svg></button></div></div>
   <div class="gut"><div class="sheet-body">
     <div class="group" id="libList"></div>
+    <div class="group"><h3>Importar</h3><div class="lib-item"><button class="open" id="libImport"><b>Importar um ritmo</b><span>De uma foto, print, arquivo MusicXML ou MIDI</span></button></div></div>
     <div class="group"><h3>Modelo</h3><div class="lib-item"><button class="open" id="openExample"><b>Exercício de demonstração</b><span>Abre uma cópia nova do exemplo com todos os recursos</span></button></div></div>
     <div class="group"><h3>Cópia de segurança</h3>
       <div class="field"><button class="lnk" id="backupBtn">Exportar todas as partituras</button></div>
@@ -507,6 +522,26 @@ button { cursor: pointer; -webkit-tap-highlight-color: transparent; touch-action
     <button class="btn danger-btn" id="tRemove">Remover este texto</button>
   </div></div>
 </div>
+
+<!-- Importar -->
+<div class="sheet" id="importSheet" hidden>
+  <div class="sheet-bar"><div class="gut"><button class="icon" data-close aria-label="Fechar"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></svg></button><h2 style="text-align:center">Importar ritmo</h2><span style="width:44px"></span></div></div>
+  <div class="gut"><div class="sheet-body">
+    <div class="group">
+      <button class="exp" id="impPhotoBtn"><span class="ico"><svg viewBox="0 0 24 24"><path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/></svg></span><span class="txt"><b>Foto ou print</b><small id="impPhotoSub">A imagem fica fixa acima da pauta para você copiar o ritmo</small></span></button>
+      <button class="exp" id="impFileBtn"><span class="ico"><svg viewBox="0 0 24 24"><path d="M14 3H6v18h12V7z"/><path d="M14 3v4h4M9 17V11l5-1v5"/><circle cx="8" cy="17" r="1.4"/><circle cx="13" cy="15.5" r="1.4"/></svg></span><span class="txt"><b>Arquivo MusicXML ou MIDI</b><small>.musicxml, .xml, .mxl ou .mid — do MuseScore, Sibelius, Finale, Guitar Pro, Logic, GarageBand ou bateria eletrônica</small></span></button>
+    </div>
+    <div id="impWork" hidden>
+      <div class="group impimg"><img id="impImg" alt="Imagem escolhida"></div>
+      <div class="impbtns"><button class="btn primary" id="impRead" hidden>Ler o ritmo com o Claude</button><button class="btn" id="impRef">Usar a imagem para copiar</button><button class="btn" id="impStop" hidden>Parar</button></div>
+      <p class="hint" id="impNoAI" hidden>A leitura automática da imagem funciona quando o app é aberto dentro do Claude. Aqui, a imagem fica fixa acima da pauta para você copiar.</p>
+    </div>
+    <div class="pdfstate" id="impState" role="status"></div>
+    <p class="hint">O ritmo importado vira uma partitura nova na sua lista, com figuras, pausas, quiálteras, acentos e notas fantasma, e pode ser editado como qualquer outra. Partituras com várias vozes (mãos e pés) são juntadas numa pauta só. Do MuseScore, use Arquivo › Exportar › MusicXML.</p>
+  </div></div>
+</div>
+<input type="file" id="impPhotoIn" accept="image/*" hidden>
+<input type="file" id="impFileIn" hidden>
 
 <!-- Exportar -->
 <div class="sheet" id="exportSheet" hidden>
@@ -2475,7 +2510,7 @@ function renderScore() {
     drawRow(ctx, sc, s, 0, { editor: true, selection: S.selection, cursor: S.cursor, isFirst: i === 0, playing: S.playRef, eraser: S.eraser ? S.eraseWhat : false });
   });
 }
-function render() { renderScore(); renderPalette(); }
+function render() { renderScore(); renderPalette(); renderRef(); }
 function revealCursor() {
   const m = S.selection ? S.selection.m : S.cursor.m;
   const sys = systemsCache.findIndex(s => s.measures.some(lm => lm.index === m));
@@ -2704,7 +2739,7 @@ $('#libList').addEventListener('click', e => {
 function loadScore(score, example = false) {
   stopPlayback();
   if (S.eraser) setEraser(false);
-  S.score = normalize(score); S.isExample = example; S.selection = null; S.undo = []; S.redo = []; S.lastInserted = null; S.message = '';
+  S.score = normalize(score); S.isExample = example; $('#importNote').hidden = true; S.selection = null; S.undo = []; S.redo = []; S.lastInserted = null; S.message = '';
   S.cursor = { m: 0, i: visibleEvents(score.measures[0]).length };
   render();
   $('#desk').scrollTop = 0;
@@ -2984,6 +3019,616 @@ buildPalette();
 setZoom(S.zoom);
 render();
 setSave('Exemplo · carregando…');
+/* ================= Importar ritmos (MIDI, MusicXML, foto ou print) ================= */
+// Todos os formatos viram uma lista de ataques { t (em semibreves), notes:[{inst, ghost}], accent, ornament, sticking, len? }
+// e passam pelo mesmo quantizador, que escreve as figuras, pausas e quiálteras por tempo.
+const GM_DRUMS = { 35: 'bass', 36: 'bass', 37: 'crossStick', 38: 'snare', 39: 'snare', 40: 'snare', 41: 'floorTom2', 43: 'floorTom',
+  45: 'tom3', 47: 'tom2', 48: 'tom1', 50: 'tom1', 42: 'hiHat', 44: 'hiHatPedal', 46: 'hiHatOpen', 49: 'crash', 57: 'crash',
+  51: 'ride', 59: 'ride', 53: 'rideBell', 52: 'china', 55: 'splash', 56: 'cowbell', 67: 'agogoHi', 68: 'agogoLo' };
+function nameToInst(name) {
+  const s = String(name || '').toLowerCase();
+  if (!s) return null;
+  if (INST[name]) return name;
+  const has = (...w) => w.some(x => s.includes(x));
+  if (has('hat', 'chimbal', 'hh')) {
+    if (has('pedal', 'foot', ' pé', 'pe)', 'pé')) return 'hiHatPedal';
+    if (has('half', 'meio', '½')) return 'hiHatHalf';
+    if (has('open', 'aberto')) return 'hiHatOpen';
+    return 'hiHat';
+  }
+  if (has('ride', 'condu')) return has('bell', 'cúpula', 'cupula') ? 'rideBell' : 'ride';
+  if (has('bell', 'cúpula', 'cupula') && !has('cow')) return 'rideBell';
+  if (has('crash', 'ataque')) return 'crash';
+  if (has('splash')) return 'splash';
+  if (has('china')) return 'china';
+  if (has('cowbell', 'cow bell', 'campana')) return has('foot', 'pedal', 'pé') ? 'cowbellFoot' : 'cowbell';
+  if (has('agog')) return has('low', 'grave', 'lo') && !has('high', 'agudo', 'hi') ? 'agogoLo' : (has('low', 'grave') ? 'agogoLo' : 'agogoHi');
+  if (has('side stick', 'sidestick', 'cross', 'rim click', 'aro')) return 'crossStick';
+  if (has('rim')) return 'rimshot';
+  if (has('snare', 'caixa', 'caisse', 'redoblante', 'tarola')) return 'snare';
+  if (has('kick', 'bass drum', 'bassdrum', 'bumbo', 'bombo', 'bass')) return 'bass';
+  if (has('floor', 'surdo')) return has('low', '2', 'grave') ? 'floorTom2' : 'floorTom';
+  if (has('tom')) return has('low', '3', 'grave') ? 'tom3' : has('mid', '2', 'médio', 'medio') ? 'tom2' : 'tom1';
+  return null;
+}
+// Posição na pauta de 5 linhas (passo 0 = 1ª linha) + cabeça da nota → instrumento
+function stepToInst(step, head) {
+  const x = /x|cross|circle-x|cymbal/.test(head || '');
+  if (/diamond/.test(head || '')) return 'rideBell';
+  if (/triangle/.test(head || '')) return step <= -1 ? 'cowbellFoot' : 'cowbell';
+  if (x) return step >= 11 ? 'china' : step >= 10 ? 'crash' : step === 9 ? 'hiHat' : step === 8 ? 'ride' : step <= 0 ? 'hiHatPedal' : step === 5 ? 'crossStick' : 'hiHat';
+  return ({ '-1': 'hiHatPedal', 0: 'bass', 1: 'bass', 2: 'floorTom2', 3: 'floorTom', 4: 'tom3', 5: 'snare', 6: 'tom2', 7: 'tom1', 8: 'tom1' })[step] || (step > 8 ? 'tom1' : 'bass');
+}
+
+// figuras possíveis (com até 2 pontos), da maior para a menor
+const REPR = [];
+VALUES.forEach(v => [0, 1, 2].forEach(d => { if (v * 2 ** d <= 128) REPR.push({ v, d, w: (1 / v) * (2 - 1 / 2 ** d) }); }));
+REPR.sort((a, b) => b.w - a.w || a.d - b.d);
+const EPS = 1e-6;
+function splitDur(W, maxDots = 2) {
+  const out = []; let r = W, guard = 0;
+  while (r > EPS && guard++ < 24) {
+    const p = REPR.find(x => x.d <= maxDots && x.w <= r + EPS);
+    if (!p) break;
+    out.push(p); r -= p.w;
+  }
+  return out;
+}
+// divisões possíveis de um tempo de duração L (em semibreves)
+function gridCandidates(L) {
+  const c = [];
+  const straight = [[L, 0], [1 / 4, 0.1], [1 / 8, 0.2], [1 / 16, 0.4], [1 / 32, 0.9]];
+  straight.forEach(([s, pen]) => {
+    const n = L / s;
+    if (Math.abs(n - Math.round(n)) < EPS && n >= 1 && n <= 16 && splitDur(s, 1).length === 1) c.push({ n: Math.round(n), sw: s, r: s, tup: null, pen });
+  });
+  const tup = (actual, normal, unit, pen) => {
+    const sw = 1 / unit, r = sw * normal / actual, n = L / r;
+    if (Math.abs(n - Math.round(n)) < EPS) c.push({ n: Math.round(n), sw, r, tup: { actual, normal, unit }, pen });
+  };
+  if (Math.abs(L - 1 / 4) < EPS) { tup(3, 2, 8, 0.5); tup(6, 4, 16, 0.8); tup(5, 4, 16, 1.2); tup(7, 4, 16, 1.5); tup(12, 8, 32, 1.6); }
+  if (Math.abs(L - 3 / 8) < EPS) { tup(2, 3, 8, 0.7); tup(4, 3, 16, 1.0); }
+  if (Math.abs(L - 1 / 2) < EPS) tup(3, 2, 4, 0.9);
+  return c;
+}
+const ACC_RANK = { none: 0, accent: 1, marcato: 2 };
+function mergeOnset(a, b) {
+  b.notes.forEach(n => { const o = a.notes.find(x => x.inst === n.inst); if (o) o.ghost = o.ghost && n.ghost; else a.notes.push({ ...n }); });
+  if (ACC_RANK[b.accent || 'none'] > ACC_RANK[a.accent || 'none']) a.accent = b.accent;
+  if ((!a.ornament || a.ornament === 'none') && b.ornament) a.ornament = b.ornament;
+  if ((!a.sticking || a.sticking === 'none') && b.sticking) a.sticking = b.sticking;
+  if (b.len != null) a.len = a.len == null ? b.len : Math.max(a.len, b.len);
+  if (!a.dyn && b.dyn) a.dyn = b.dyn;
+}
+function cleanNotes(notes) {
+  const out = [], steps = new Set();
+  notes.forEach(n => { if (!INST[n.inst]) return; const st = INST[n.inst].step; if (steps.has(st)) return; steps.add(st); out.push({ inst: n.inst, ghost: !!n.ghost }); });
+  return out;
+}
+const wdurOf = e => (1 / e.value) * (2 - 1 / 2 ** e.dots);
+
+// spec = { title, tempo, measures:[{ time, repeatStart?, repeatEnd? }], onsets:[...] }
+function buildFromOnsets(spec) {
+  const report = { dropped: 0, merged: 0 };
+  let start = 0;
+  const groups = [], measures = spec.measures.map((m, mi) => {
+    const cap = m.time.beats / m.time.unit, mm = { mi, start, cap, time: m.time, src: m, events: [] };
+    let g0 = start;
+    beamGroupLengths(m.time).forEach(a => { const L = a[0] / a[1]; groups.push({ mm, start: g0, L, ons: [] }); g0 += L; });
+    start += cap;
+    return mm;
+  });
+  const end = start;
+  const ons = spec.onsets.filter(o => o.notes && o.notes.length).map(o => ({ ...o, notes: o.notes.map(n => ({ ...n })), t: Math.max(0, o.t) })).sort((a, b) => a.t - b.t);
+  let gi = 0;
+  ons.forEach(o => {
+    if (o.t >= end - EPS) { report.dropped++; return; }
+    while (gi < groups.length - 1 && o.t >= groups[gi].start + groups[gi].L - EPS) gi++;
+    groups[gi].ons.push(o);
+  });
+  let carry = [];
+  groups.forEach((g, k) => {
+    const list = carry.concat(g.ons); carry = [];
+    let best = null;
+    gridCandidates(g.L).forEach(c => {
+      let err = 0; const used = new Map(); let coll = 0;
+      list.forEach(o => {
+        const p = Math.max(0, o.t - g.start), j = Math.round(p / c.r);
+        err += Math.abs(p - j * c.r) / g.L;
+        const key = Math.min(j, c.n);
+        if (used.has(key) && Math.abs(used.get(key) - o.t) > 0.004) coll++;
+        used.set(key, o.t);
+      });
+      const cost = err * 100 + c.pen + coll * 8;
+      if (!best || cost < best.cost - 1e-9) best = { ...c, cost };
+    });
+    const c = best, slots = new Map();
+    list.forEach(o => {
+      const j = Math.round(Math.max(0, o.t - g.start) / c.r);
+      if (j >= c.n) {
+        if (k < groups.length - 1) carry.push({ ...o, t: g.start + g.L });
+        else report.dropped++;
+        return;
+      }
+      if (slots.has(j)) { mergeOnset(slots.get(j), o); report.merged++; } else slots.set(j, { ...o, notes: o.notes.map(n => ({ ...n })) });
+    });
+    const tuplet = c.tup ? { gid: uid(), ...c.tup } : null;
+    const evs = g.mm.events;
+    const push = (p, notes, o, edges) => evs.push({ id: uid(), value: p.v, dots: p.d, notes, tuplet, accent: (o && o.accent) || 'none',
+      ornament: (o && o.ornament) || 'none', sticking: (o && o.sticking) || 'none', tie: false, dyn: (o && o.dyn) || '', choke: false, text: '',
+      _gs: edges[0], _ge: edges[1], _len: o && o.len != null ? o.len : null });
+    const rests = (k0, k1) => {
+      if (k1 <= k0) return;
+      const pieces = splitDur((k1 - k0) * c.sw);
+      pieces.forEach((p, i) => push(p, [], null, [k0 === 0 && i === 0, k1 === c.n && i === pieces.length - 1]));
+    };
+    const js = [...slots.keys()].sort((a, b) => a - b);
+    rests(0, js.length ? js[0] : c.n);
+    js.forEach((j, i) => {
+      const o = slots.get(j), next = i + 1 < js.length ? js[i + 1] : c.n;
+      let stop = next;
+      if (o.len != null) stop = Math.min(next, j + Math.max(1, Math.round(o.len / c.r - 0.25)));
+      const notes = cleanNotes(o.notes);
+      const pieces = splitDur((stop - j) * c.sw);
+      if (!notes.length) { rests(j, next); return; }
+      push(pieces[0], notes, o, [j === 0, stop === c.n && pieces.length === 1]);
+      if (pieces.length > 1) { let pos = pieces[0].w; pieces.slice(1).forEach((p, pi) => { push(p, [], null, [false, stop === c.n && pi === pieces.length - 2]); pos += p.w; }); }
+      rests(stop, next);
+    });
+  });
+  // junta tempos inteiros de pausa (e notas longas, quando a duração escrita é conhecida)
+  measures.forEach(mm => {
+    const evs = mm.events;
+    let changed = true;
+    while (changed) {
+      changed = false; let pos = 0;
+      for (let i = 0; i < evs.length - 1; i++) {
+        const a = evs[i], b = evs[i + 1], da = wdurOf(a), db = wdurOf(b), sum = da + db;
+        if (!a.tuplet && !b.tuplet && isRest(b) && a._gs && a._ge && b._gs && b._ge) {
+          const p = REPR.find(x => Math.abs(x.w - sum) < EPS && x.d <= 1);
+          const aligned = Math.abs(pos / sum - Math.round(pos / sum)) < EPS;
+          const ok = isRest(a) || (a._len != null && a._len >= sum - EPS);
+          if (p && aligned && ok) { a.value = p.v; a.dots = p.d; a._ge = b._ge; evs.splice(i + 1, 1); changed = true; break; }
+        }
+        pos += a.tuplet ? da * a.tuplet.normal / a.tuplet.actual : da;
+      }
+    }
+    evs.forEach(e => { delete e._gs; delete e._ge; delete e._len; });
+  });
+  const s = blankScore(library.length + 1);
+  s.title = (spec.title || '').trim() || s.title;
+  if (spec.tempo > 0) { s.tempo = Math.round(Math.max(20, Math.min(300, spec.tempo))); s.playBpm = s.tempo; }
+  s.measures = measures.map(mm => {
+    const m = newMeasure(mm.time);
+    m.events = mm.events; m.repeatStart = !!mm.src.repeatStart; m.repeatEnd = !!mm.src.repeatEnd;
+    if (mm.src.repeatTimes > 2) m.repeatTimes = mm.src.repeatTimes;
+    return m;
+  });
+  if (!s.measures.length) s.measures = [newMeasure({ beats: 4, unit: 4, symbol: 'numeric' })];
+  report.measures = s.measures.length;
+  report.notes = s.measures.reduce((a, m) => a + m.events.filter(e => !isRest(e)).length, 0);
+  return { score: s, report };
+}
+
+/* ---------- MIDI ---------- */
+function parseMidi(buf) {
+  const d = new DataView(buf), u8 = new Uint8Array(buf);
+  let p = 0;
+  const str = n => { let s = ''; for (let i = 0; i < n; i++) s += String.fromCharCode(u8[p + i]); p += n; return s; };
+  const u32 = () => { const v = d.getUint32(p); p += 4; return v; }, u16 = () => { const v = d.getUint16(p); p += 2; return v; };
+  const vlq = () => { let v = 0, b; do { b = u8[p++]; v = (v << 7) | (b & 0x7f); } while (b & 0x80 && p < u8.length); return v; };
+  if (str(4) !== 'MThd') throw new Error('Este arquivo não é um MIDI (.mid) válido.');
+  const hl = u32(); u16(); const ntr = u16(), div = u16(); p = 8 + hl;
+  if (div & 0x8000) throw new Error('Este MIDI usa marcação de tempo SMPTE, que não é suportada.');
+  const notes = [], tsigs = [], tempos = []; let name = '';
+  for (let t = 0; t < ntr && p < u8.length - 8; t++) {
+    const id = str(4), len = u32(), end = p + len;
+    if (id !== 'MTrk') { p = end; continue; }
+    let tick = 0, status = 0;
+    while (p < end) {
+      tick += vlq();
+      const b = u8[p++];
+      if (b === 0xff) {
+        const type = u8[p++], l = vlq(), q = p;
+        if (type === 0x58 && l >= 2) tsigs.push({ tick, n: u8[q], d: 2 ** u8[q + 1] });
+        else if (type === 0x51 && l >= 3) tempos.push({ tick, us: (u8[q] << 16) | (u8[q + 1] << 8) | u8[q + 2] });
+        else if (type === 0x03 && !name && t === 0) name = new TextDecoder().decode(u8.slice(q, q + l));
+        p = q + l;
+      } else if (b === 0xf0 || b === 0xf7) { p += vlq(); }
+      else {
+        let a;
+        if (b & 0x80) { status = b; a = u8[p++]; } else a = b;
+        const hi = status & 0xf0, ch = status & 0x0f;
+        let v = 0;
+        if (hi !== 0xc0 && hi !== 0xd0) v = u8[p++];
+        if (hi === 0x90 && v > 0) notes.push({ tick, ch, key: a, vel: v });
+      }
+    }
+    p = end;
+  }
+  if (!notes.length) throw new Error('Não encontrei notas neste MIDI.');
+  const drumCh = notes.some(n => n.ch === 9);
+  const use = notes.filter(n => !drumCh || n.ch === 9);
+  const mapped = use.filter(n => GM_DRUMS[n.key]);
+  const ignored = use.length - mapped.length;
+  if (!mapped.length) throw new Error('As notas deste MIDI não são de bateria (canal 10 / mapa General MIDI).');
+  const vels = mapped.map(n => n.vel).sort((a, b) => a - b), med = vels[vels.length >> 1];
+  const accThr = Math.max(105, med + 20), ghostThr = Math.min(50, med - 35);
+  const W = 4 * div;  // ticks por semibreve
+  tsigs.sort((a, b) => a.tick - b.tick);
+  const last = Math.max(...mapped.map(n => n.tick));
+  const measures = []; let tick = 0, ts = { n: 4, d: 4 }, k = 0;
+  while (tick <= last || !measures.length) {
+    while (k < tsigs.length && tsigs[k].tick <= tick + 1) { ts = tsigs[k]; k++; }
+    const beats = Math.max(1, Math.min(32, ts.n)), unit = [1, 2, 4, 8, 16, 32].includes(ts.d) ? ts.d : 4;
+    measures.push({ time: { beats, unit, symbol: 'numeric' } });
+    tick += beats * W / unit;
+    if (measures.length > 999) break;
+  }
+  const onsets = mapped.map(n => ({ t: n.tick / W, notes: [{ inst: GM_DRUMS[n.key], ghost: n.vel <= ghostThr }], accent: n.vel >= accThr ? 'accent' : 'none' }));
+  const tempo = tempos.length ? Math.round(60e6 / tempos.sort((a, b) => a.tick - b.tick)[0].us) : 0;
+  return { title: name.trim(), tempo, measures, onsets, ignored };
+}
+
+/* ---------- MusicXML (.musicxml, .xml, .mxl) ---------- */
+async function unzip(buf) {
+  const d = new DataView(buf), u8 = new Uint8Array(buf);
+  let e = buf.byteLength - 22;
+  while (e >= 0 && d.getUint32(e, true) !== 0x06054b50) e--;
+  if (e < 0) throw new Error('Arquivo compactado inválido.');
+  const n = d.getUint16(e + 10, true); let cd = d.getUint32(e + 16, true);
+  const files = {};
+  for (let i = 0; i < n && d.getUint32(cd, true) === 0x02014b50; i++) {
+    const method = d.getUint16(cd + 10, true), csize = d.getUint32(cd + 20, true);
+    const nl = d.getUint16(cd + 28, true), xl = d.getUint16(cd + 30, true), cl = d.getUint16(cd + 32, true), off = d.getUint32(cd + 42, true);
+    files[new TextDecoder().decode(u8.slice(cd + 46, cd + 46 + nl))] = { method, csize, off };
+    cd += 46 + nl + xl + cl;
+  }
+  return {
+    names: Object.keys(files),
+    async text(name) {
+      const f = files[name]; if (!f) return null;
+      const s = f.off + 30 + d.getUint16(f.off + 26, true) + d.getUint16(f.off + 28, true);
+      const data = u8.slice(s, s + f.csize);
+      if (f.method === 0) return new TextDecoder().decode(data);
+      if (f.method !== 8 || typeof DecompressionStream === 'undefined') throw new Error('Não consigo abrir este .mxl neste navegador. Exporte como MusicXML não compactado (.musicxml).');
+      const out = await new Response(new Blob([data]).stream().pipeThrough(new DecompressionStream('deflate-raw'))).arrayBuffer();
+      return new TextDecoder().decode(out);
+    }
+  };
+}
+async function mxlText(buf) {
+  const z = await unzip(buf);
+  let root = null;
+  const cont = await z.text('META-INF/container.xml');
+  if (cont) { const m = cont.match(/full-path="([^"]+)"/); if (m) root = m[1]; }
+  if (!root) root = z.names.find(n => !n.startsWith('META-INF') && /\.(musicxml|xml)$/i.test(n));
+  if (!root) {
+    if (z.names.some(n => /\.mscx$/i.test(n))) throw new Error('Este é um arquivo do MuseScore (.mscz). No MuseScore, use Arquivo › Exportar › MusicXML e importe o arquivo exportado.');
+    throw new Error('Não encontrei uma partitura MusicXML dentro do arquivo.');
+  }
+  return z.text(root);
+}
+function parseMusicXml(text) {
+  const doc = new DOMParser().parseFromString(text, 'application/xml');
+  if (doc.getElementsByTagName('parsererror').length) throw new Error('O arquivo não é um MusicXML válido.');
+  const root = doc.documentElement;
+  if (root.nodeName === 'score-timewise') throw new Error('Este MusicXML está no formato “timewise”, que não é suportado. Exporte no formato padrão (partwise).');
+  if (root.nodeName !== 'score-partwise') throw new Error('O arquivo não é uma partitura MusicXML.');
+  const kid = (el, name) => el && [...el.children].find(c => c.nodeName === name);
+  const txt = (el, name) => { const c = name ? kid(el, name) : el; return c ? c.textContent.trim() : ''; };
+  const q = (el, sel) => el.querySelector(sel);
+  const title = txt(q(root, 'work > work-title')) || txt(q(root, 'movement-title')) || '';
+  // instrumentos de cada parte
+  const instOf = {}, partName = {};
+  [...root.getElementsByTagName('score-part')].forEach(sp => {
+    const pid = sp.getAttribute('id'); partName[pid] = txt(sp, 'part-name');
+    [...sp.getElementsByTagName('score-instrument')].forEach(si => { instOf[si.getAttribute('id')] = { name: txt(si, 'instrument-name') }; });
+    [...sp.getElementsByTagName('midi-instrument')].forEach(mi => {
+      const id = mi.getAttribute('id'), un = parseInt(txt(mi, 'midi-unpitched'), 10);
+      (instOf[id] = instOf[id] || {}).gm = un ? un - 1 : null;
+    });
+  });
+  const parts = [...root.getElementsByTagName('part')];
+  if (!parts.length) throw new Error('Nenhuma parte encontrada na partitura.');
+  const drumParts = parts.filter(p => p.getElementsByTagName('unpitched').length);
+  const part = drumParts[0] || parts[0];
+  const pitchedOnly = !drumParts.length;
+  const DIA = { C: 0, D: 1, E: 2, F: 3, G: 4, A: 5, B: 6 }, E4 = 4 * 7 + 2;
+  const measures = [], onsets = [];
+  let div = 1, time = { beats: 4, unit: 4, symbol: 'numeric' }, start = 0, tempo = 0, unknown = 0;
+  [...part.children].filter(c => c.nodeName === 'measure').forEach(meas => {
+    let pos = 0, maxPos = 0, lastStart = 0, grace = 0, rs = false, re = false, times = 0;
+    const mOns = [];
+    [...meas.children].forEach(el => {
+      const n = el.nodeName;
+      if (n === 'attributes') {
+        const dv = parseInt(txt(el, 'divisions'), 10); if (dv > 0) div = dv;
+        const tm = kid(el, 'time');
+        if (tm) {
+          const beats = txt(tm, 'beats').split('+').reduce((a, x) => a + (parseInt(x, 10) || 0), 0), unit = parseInt(txt(tm, 'beat-type'), 10);
+          if (beats > 0 && [1, 2, 4, 8, 16, 32].includes(unit)) time = { beats: Math.min(32, beats), unit, symbol: tm.getAttribute('symbol') === 'common' ? 'common' : tm.getAttribute('symbol') === 'cut' ? 'cut' : 'numeric' };
+        }
+      } else if (n === 'backup') { pos -= parseInt(txt(el, 'duration'), 10) || 0; }
+      else if (n === 'forward') { pos += parseInt(txt(el, 'duration'), 10) || 0; maxPos = Math.max(maxPos, pos); }
+      else if (n === 'direction' || n === 'sound') {
+        const snd = n === 'sound' ? el : q(el, 'sound'); const tp = snd && parseFloat(snd.getAttribute('tempo'));
+        if (tp > 0 && !tempo) tempo = tp;
+        const pm = q(el, 'metronome > per-minute'); if (pm && !tempo && parseFloat(pm.textContent) > 0) tempo = parseFloat(pm.textContent);
+      } else if (n === 'barline') {
+        const r = kid(el, 'repeat');
+        if (r) { if (r.getAttribute('direction') === 'forward') rs = true; else { re = true; times = parseInt(r.getAttribute('times'), 10) || 0; } }
+      } else if (n === 'note') {
+        if (kid(el, 'cue')) return;
+        if (kid(el, 'grace')) { grace++; return; }
+        const durd = parseInt(txt(el, 'duration'), 10) || 0;
+        const chord = !!kid(el, 'chord');
+        const at = chord ? lastStart : pos;
+        if (!chord) { lastStart = pos; pos += durd; maxPos = Math.max(maxPos, pos); }
+        if (kid(el, 'rest')) { grace = 0; return; }
+        // instrumento
+        let inst = null;
+        const ie = kid(el, 'instrument'), info = ie && instOf[ie.getAttribute('id')];
+        if (info) inst = (info.gm != null && GM_DRUMS[info.gm]) || nameToInst(info.name);
+        const head = txt(el, 'notehead');
+        const un = kid(el, 'unpitched');
+        if (!inst && un) inst = stepToInst(DIA[txt(un, 'display-step')] + 7 * (parseInt(txt(un, 'display-octave'), 10) || 4) - E4, head);
+        if (!inst && pitchedOnly) { const pp = kid(el, 'pitch'); inst = pp ? stepToInst(DIA[txt(pp, 'step')] + 7 * (parseInt(txt(pp, 'octave'), 10) || 4) - E4, head) : 'snare'; }
+        if (!inst && info === undefined && !un) inst = nameToInst(partName[part.getAttribute('id')]) || 'snare';
+        if (!inst) { unknown++; return; }
+        const nh = kid(el, 'notehead');
+        const ghost = !!(nh && nh.getAttribute('parentheses') === 'yes');
+        const art = q(el, 'notations articulations');
+        const accent = art && kid(art, 'strong-accent') ? 'marcato' : art && kid(art, 'accent') ? 'accent' : 'none';
+        if (inst === 'hiHat' && (q(el, 'notations technical open') || q(el, 'notations technical open-string'))) inst = 'hiHatOpen';
+        let ornament = grace === 1 ? 'flam' : grace >= 2 ? 'drag' : 'none';
+        const trem = q(el, 'notations ornaments tremolo');
+        if (trem && trem.getAttribute('type') !== 'start' && trem.getAttribute('type') !== 'stop') { const k = Math.max(1, Math.min(3, parseInt(trem.textContent, 10) || 1)); ornament = ornament === 'none' ? 'trem' + k : ornament; }
+        let sticking = 'none';
+        const fg = q(el, 'notations technical fingering');
+        if (fg) { const f = fg.textContent.trim().toUpperCase(); if (f === 'R' || f === 'D') sticking = 'R'; else if (f === 'L' || f === 'E') sticking = 'L'; }
+        grace = 0;
+        mOns.push({ at, len: durd, notes: [{ inst, ghost }], accent, ornament, sticking });
+      }
+    });
+    const cap = time.beats / time.unit;
+    // anacruse: alinha as notas ao fim do compasso
+    const filledW = maxPos / div / 4;
+    const shift = meas.getAttribute('implicit') === 'yes' && filledW < cap - EPS && measures.length === 0 ? cap - filledW : 0;
+    mOns.forEach(o => { const t = o.at / div / 4 + shift; if (t < cap - EPS && t >= -EPS) onsets.push({ ...o, t: start + t, len: o.len / div / 4 }); });
+    measures.push({ time: { ...time }, repeatStart: rs, repeatEnd: re, repeatTimes: times });
+    start += cap;
+  });
+  if (!measures.length) throw new Error('A partitura não tem compassos.');
+  return { title, tempo, measures, onsets, ignored: unknown };
+}
+
+/* ---------- Foto ou print (o Claude lê a imagem) ---------- */
+const VISION_PROMPT = `You are transcribing a photo or screenshot of drum-set or percussion sheet music into data, so it can be edited in a drum notation app. Transcribe the rhythm exactly as written, every measure, in reading order (left to right, top to bottom).
+
+Reply with only a JSON object of this shape:
+{"title": "title printed on the page or \\"\\"", "tempo": 0, "time": "4/4",
+ "measures": [ {"time": "4/4", "repeatStart": false, "repeatEnd": false, "voices": [ [EVENT, ...], [EVENT, ...] ] } ],
+ "doubts": "one short sentence in Brazilian Portuguese about anything unclear, or \\"\\""}
+
+- "time" on a measure is only needed when the time signature changes. "tempo" is the BPM if printed, else 0.
+- "voices": each voice is one rhythmic layer of the measure. Drum music often has two: stems up (hands) and stems down (feet). Use one voice when there is only one layer. The durations of each voice must add up to exactly the length of the measure (use rests).
+- A measure written with the repeat-measure sign (%) gets the same voices as the previous measure.
+
+EVENT: {"d": 8, "dots": 0, "tuplet": null, "rest": false, "notes": ["hiHat", "bass"], "ghost": [], "accent": "none", "ornament": "none", "sticking": ""}
+- "d": written value: 1 whole, 2 half, 4 quarter, 8 eighth, 16 sixteenth, 32 thirty-second, 64.
+- "tuplet": [actual, normal] on every note and rest inside a tuplet, e.g. [3,2] for a triplet, [6,4] sextuplet, [5,4] quintuplet; null otherwise.
+- "notes": every instrument struck together in that voice at that moment (one event = one stem/chord). Empty with "rest": true for a rest.
+- "ghost": the instruments drawn with parentheses around the notehead.
+- "accent": "accent" for >, "marcato" for ^, else "none". "ornament": "flam" (one grace note), "drag" (two grace notes), "buzz" (z on the stem), "trem1"/"trem2"/"trem3" (slashes on the stem), else "none". "sticking": "R" or "L" (also D=R, E=L) if printed under the note, else "".
+
+Instrument keys and where they usually sit on the 5-line drum staff (if the page has its own legend, follow the legend):
+- "bass": bass drum / kick, 1st space (bottom space), normal notehead
+- "floorTom2": low floor tom, 2nd line; "floorTom": floor tom, 2nd space; "tom3": low tom, 3rd line
+- "snare": snare, 3rd space; "rimshot": snare with a slashed notehead; "crossStick": circled x or x in the 3rd space (cross stick / side stick)
+- "tom2": mid tom, 4th line; "tom1": high tom, 4th space
+- "ride": x on the 5th (top) line; "rideBell": diamond on the top line
+- "hiHat": x in the space above the staff; "hiHatOpen": same with a small "o" above; "hiHatHalf": same with a slashed "o"
+- "crash": x on the 1st ledger line above; "splash" / "china": x higher up
+- "hiHatPedal": x below the staff (foot hi-hat); "cowbell": triangle in the 4th space; "cowbellFoot": triangle below the staff
+- "agogoHi" / "agogoLo": agogo bell high / low
+On a single-line percussion staff: notes on the line are "snare" unless the staff is labeled as another instrument (then use that instrument); for agogo, notes above the line are "agogoHi" and below are "agogoLo"; for a 2-line staff, upper = "agogoHi", lower = "agogoLo".
+
+If the image shows no rhythm notation at all, reply {"error": "short reason in Brazilian Portuguese"}.`;
+function parseTimeStr(s, fallback) {
+  const m = String(s || '').trim().match(/^(\d{1,2})\s*\/\s*(\d{1,2})$/);
+  if (m && +m[1] > 0 && [1, 2, 4, 8, 16, 32].includes(+m[2])) return { beats: Math.min(32, +m[1]), unit: +m[2], symbol: 'numeric' };
+  if (/^c$/i.test(String(s || '').trim())) return { beats: 4, unit: 4, symbol: 'common' };
+  if (/^(¢|c\|)$/i.test(String(s || '').trim())) return { beats: 2, unit: 2, symbol: 'cut' };
+  return fallback;
+}
+function specFromVision(j) {
+  if (!j || typeof j !== 'object') throw new Error('A resposta não veio no formato esperado.');
+  if (j.error) throw new Error(String(j.error));
+  const ms = Array.isArray(j.measures) ? j.measures : [];
+  if (!ms.length) throw new Error('Não encontrei compassos de ritmo na imagem.');
+  let time = parseTimeStr(j.time, { beats: 4, unit: 4, symbol: 'numeric' }), start = 0, dropped = 0;
+  const measures = [], onsets = [];
+  ms.forEach(m => {
+    time = parseTimeStr(m && m.time, time);
+    const cap = time.beats / time.unit;
+    let voices = Array.isArray(m && m.voices) ? m.voices : Array.isArray(m && m.events) ? [m.events] : [];
+    voices.forEach(v => {
+      if (!Array.isArray(v)) return;
+      let t = 0;
+      v.forEach(e => {
+        if (!e || typeof e !== 'object') return;
+        const val = VALUES.includes(+e.d) ? +e.d : 4, dots = Math.max(0, Math.min(2, +e.dots || 0));
+        let w = (1 / val) * (2 - 1 / 2 ** dots);
+        const tp = Array.isArray(e.tuplet) && +e.tuplet[0] > 0 && +e.tuplet[1] > 0 ? e.tuplet : null;
+        if (tp) w *= +tp[1] / +tp[0];
+        const notes = (Array.isArray(e.notes) ? e.notes : []).map(k => nameToInst(k)).filter(Boolean);
+        if (!e.rest && notes.length) {
+          if (t < cap - EPS) {
+            const gh = (Array.isArray(e.ghost) ? e.ghost : []).map(k => nameToInst(k));
+            onsets.push({ t: start + t, len: w, notes: notes.map(k => ({ inst: k, ghost: gh.includes(k) })),
+              accent: ['accent', 'marcato'].includes(e.accent) ? e.accent : 'none',
+              ornament: ORN[e.ornament] ? e.ornament : 'none',
+              sticking: /^[RD]$/i.test(e.sticking || '') ? 'R' : /^[LE]$/i.test(e.sticking || '') ? 'L' : 'none' });
+          } else dropped++;
+        }
+        t += w;
+      });
+    });
+    measures.push({ time: { ...time }, repeatStart: !!(m && m.repeatStart), repeatEnd: !!(m && m.repeatEnd) });
+    start += cap;
+  });
+  return { title: typeof j.title === 'string' ? j.title : '', tempo: +j.tempo || 0, measures, onsets, ignored: dropped, doubts: typeof j.doubts === 'string' ? j.doubts : '' };
+}
+async function getSampler() { return null; }  // leitura de imagem só existe dentro do Claude
+const imageReaderP = (async () => { const s = await getSampler(); if (!s) return null; const lim = await s.limits().catch(() => null); return lim && lim.images ? { s, lim: lim.images } : null; })();
+
+/* ---------- Imagem de referência (para copiar à mão) ---------- */
+async function shrinkImage(file, maxSide = 1600, maxChars = 190000) {
+  const url = URL.createObjectURL(file);
+  try {
+    const img = await new Promise((ok, bad) => { const i = new Image(); i.onload = () => ok(i); i.onerror = () => bad(new Error('Não consegui abrir esta imagem.')); i.src = url; });
+    let side = maxSide, q = 0.72, data = '';
+    for (let k = 0; k < 8; k++) {
+      const sc = Math.min(1, side / Math.max(img.naturalWidth, img.naturalHeight));
+      const c = document.createElement('canvas'); c.width = Math.max(1, Math.round(img.naturalWidth * sc)); c.height = Math.max(1, Math.round(img.naturalHeight * sc));
+      const g = c.getContext('2d'); g.fillStyle = '#fff'; g.fillRect(0, 0, c.width, c.height); g.drawImage(img, 0, 0, c.width, c.height);
+      data = c.toDataURL('image/jpeg', q);
+      if (data.length <= maxChars) break;
+      side *= 0.82; q = Math.max(0.5, q - 0.05);
+    }
+    return data;
+  } finally { URL.revokeObjectURL(url); }
+}
+function renderRef() {
+  const src = S.score && S.score.refImage, p = $('#refPanel');
+  p.hidden = !src;
+  if (!src) return;
+  if ($('#refImg').getAttribute('src') !== src) $('#refImg').src = src;
+  p.classList.toggle('min', !!S.refHidden);
+  $('#refToggle').textContent = S.refHidden ? 'Mostrar' : 'Ocultar';
+}
+$('#refToggle').onclick = () => { S.refHidden = !S.refHidden; renderRef(); };
+$('#refRemove').onclick = () => { if (!S.score.refImage) return; delete S.score.refImage; S.score.modified = Date.now(); Store.schedule(S.score); renderRef(); flash('Imagem de referência removida'); };
+$('#refImg').onclick = () => $('#refPanel').classList.toggle('big');
+
+/* ---------- Tela de importação ---------- */
+const Imp = { file: null, ctl: null, busy: false };
+function impState(t, err) { const st = $('#impState'); st.textContent = t || ''; st.classList.toggle('err', !!err); }
+function openImport() {
+  Imp.file = null; $('#impWork').hidden = true; impState('');
+  openSheet('#importSheet');
+}
+imageReaderP.then(r => {
+  $('#impPhotoSub').textContent = r ? 'O Claude lê o ritmo da imagem e cria uma partitura que você pode editar'
+    : 'A imagem fica fixa acima da pauta para você copiar o ritmo';
+  if (r) $('#impPhotoIn').accept = r.lim.mediaTypes.join(',');
+});
+function addImported(res, refData) {
+  const { score, report } = res;
+  if (refData) score.refImage = refData;
+  score.modified = Date.now();
+  library.push(score); Store.schedule(score);
+  $('#importSheet').hidden = true; $('#libSheet').hidden = true;
+  loadScore(score);
+  S.refHidden = false; renderRef();
+  return report;
+}
+function impNote(t) { $('#importNoteTxt').textContent = t; $('#importNote').hidden = false; }
+$('#importNoteOk').onclick = () => { $('#importNote').hidden = true; };
+function importSummary(report, extra) {
+  let t = `Importado: ${report.measures} ${report.measures === 1 ? 'compasso' : 'compassos'}, ${report.notes} notas. Toque nas notas para corrigir o que precisar.`;
+  if (extra) t += ' ' + extra;
+  return t;
+}
+$('#impFileBtn').onclick = () => { $('#impFileIn').value = ''; $('#impFileIn').click(); };
+$('#impPhotoBtn').onclick = () => { $('#impPhotoIn').value = ''; $('#impPhotoIn').click(); };
+$('#impFileIn').onchange = async e => {
+  const f = e.target.files && e.target.files[0]; if (!f) return;
+  $('#impWork').hidden = true; impState('Abrindo ' + f.name + '…');
+  try {
+    const buf = await f.arrayBuffer(), u8 = new Uint8Array(buf.slice(0, 4));
+    const base = f.name.replace(/\.[^.]+$/, '');
+    let spec;
+    if (u8[0] === 0x4d && u8[1] === 0x54 && u8[2] === 0x68 && u8[3] === 0x64) spec = parseMidi(buf);
+    else if (u8[0] === 0x50 && u8[1] === 0x4b) spec = parseMusicXml(await mxlText(buf));
+    else {
+      const text = new TextDecoder().decode(buf);
+      if (!/<score-(partwise|timewise)/.test(text)) throw new Error('Formato não reconhecido. Use MusicXML (.musicxml, .xml, .mxl) ou MIDI (.mid). Para foto ou print, use o botão de cima.');
+      spec = parseMusicXml(text);
+    }
+    if (!spec.title) spec.title = base;
+    const res = buildFromOnsets(spec);
+    if (!res.report.notes) throw new Error('Não encontrei notas de bateria neste arquivo.');
+    const extra = spec.ignored ? `${spec.ignored} ${spec.ignored === 1 ? 'nota de instrumento desconhecido ficou' : 'notas de instrumentos desconhecidos ficaram'} de fora.` : '';
+    const r = addImported(res);
+    impNote(importSummary(r, extra));
+  } catch (err) {
+    impState((err && err.message) || 'Não consegui importar este arquivo.', true);
+  }
+};
+$('#impPhotoIn').onchange = async e => {
+  const f = e.target.files && e.target.files[0]; if (!f) return;
+  Imp.file = f; impState('');
+  const url = URL.createObjectURL(f);
+  $('#impImg').onload = () => URL.revokeObjectURL(url);
+  $('#impImg').src = url;
+  $('#impWork').hidden = false;
+  const r = await imageReaderP;
+  $('#impRead').hidden = !r;
+  $('#impNoAI').hidden = !!r;
+  $('#impRef').textContent = r ? 'Só copiar olhando a imagem' : 'Usar a imagem para copiar';
+};
+$('#impRef').onclick = async () => {
+  if (!Imp.file) return;
+  try {
+    const data = await shrinkImage(Imp.file);
+    const s = blankScore(library.length + 1);
+    s.title = Imp.file.name && !/^image\./i.test(Imp.file.name) ? Imp.file.name.replace(/\.[^.]+$/, '') : s.title;
+    addImported({ score: s, report: {} }, data);
+    S.tab = 'notes'; S.collapsed = false; renderPalette();
+    impNote('A imagem fica fixa acima da pauta enquanto você escreve. Toque nela para ampliar; “Ocultar” recolhe.');
+  } catch (err) { impState(err.message, true); }
+};
+const SAMPLE_ERR = {
+  not_granted: 'Leitura automática não autorizada. Você pode copiar olhando a imagem.',
+  sampling_disabled: 'O Claude não está disponível nesta conta. Você pode copiar olhando a imagem.',
+  images_unavailable: 'Esta visualização não envia imagens ao Claude. Você pode copiar olhando a imagem.',
+  image_rejected: 'Esta imagem não pôde ser lida. Tente um print ou foto em JPG ou PNG.',
+  rate_limited: 'Muitas leituras seguidas. Espere um pouco e tente de novo.',
+  session_expired: 'Sua sessão expirou. Entre de novo no Claude e tente outra vez.',
+  refused: 'O Claude não leu esta imagem. Tente outra imagem.',
+  invalid_json: 'A leitura veio incompleta. Tente de novo, ou corte a imagem para menos compassos.',
+  empty_completion: 'A leitura veio vazia. Tente de novo com uma imagem mais nítida.',
+  prompt_too_large: 'Imagem grande demais. Corte para menos compassos.'
+};
+$('#impRead').onclick = async () => {
+  const r = await imageReaderP;
+  if (!r || !Imp.file || Imp.busy) return;
+  Imp.busy = true; Imp.ctl = new AbortController();
+  $('#impRead').disabled = true; $('#impRef').disabled = true; $('#impStop').hidden = false;
+  impState('O Claude está lendo o ritmo… isso pode levar até um minuto.');
+  try {
+    const j = await r.s.json(VISION_PROMPT, { images: [Imp.file], modelTier: 'complex', signal: Imp.ctl.signal });
+    const spec = specFromVision(j);
+    const res = buildFromOnsets(spec);
+    if (!res.report.notes) throw new Error('Não encontrei notas de bateria na imagem.');
+    if (!spec.title) res.score.title = 'Ritmo importado';
+    const data = await shrinkImage(Imp.file).catch(() => null);
+    const rep = addImported(res, data);
+    impNote(importSummary(rep, (spec.doubts ? 'Obs. do Claude: ' + spec.doubts + ' ' : '') + 'A imagem fica acima da pauta para você conferir.'));
+  } catch (err) {
+    if (err && err.code === 'cancelled') impState('');
+    else if (err && err.code) impState(SAMPLE_ERR[err.code] || 'A leitura falhou. Tente de novo.', true);
+    else impState((err && err.message) || 'A leitura falhou. Tente de novo.', true);
+  } finally {
+    Imp.busy = false; $('#impRead').disabled = false; $('#impRef').disabled = false; $('#impStop').hidden = true;
+  }
+};
+$('#impStop').onclick = () => { if (Imp.ctl) Imp.ctl.abort(); };
+$('#importBtn').onclick = openImport;
+$('#libImport').onclick = openImport;
+
 Store.init().then(list => {
   library = Array.isArray(list) ? list.filter(s => s && Array.isArray(s.measures) && s.measures.length).map(normalize) : [];
   S.ready = true;
