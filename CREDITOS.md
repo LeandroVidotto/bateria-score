@@ -1,5 +1,18 @@
 # Créditos
 
+**Timbre "Natural"** — DRSKit v1.0, do DrumGizmo (Lars Muldjord, Bent Bisballe Nyeng) com o kit de Jes Eiler/DRSDrums,
+versão SFZ por kinwie. Licença CC BY 4.0: https://creativecommons.org/licenses/by/4.0/
+Amostras: https://github.com/sfzinstruments/DrumGizmo.DRSKit
+
+**Timbre "Vintage"** — Big Rusty Drums, Karoryfer Samples, CC0 1.0 (domínio público).
+Amostras: https://github.com/sfzinstruments/karoryfer.big-rusty-drums
+
+**Timbre "Clássico"** — Sam's Sonor (Sonor Force 3001), de Sam Greene, versão SFZ por kinwie.
+Licença CC BY-SA 4.0: https://creativecommons.org/licenses/by-sa/4.0/ — as amostras modificadas (`kit-sonor.mp3`)
+seguem sob a mesma licença. Amostras: https://github.com/sfzinstruments/SamsSonor
+
+Nesses três timbres, os microfones de cada toque (pele, overheads e sala) foram mixados em estéreo e convertidos para MP3.
+
 **Timbre "Rock produzido"** — Naked Drums, de Wilkinson Audio (Yamaha Recording Custom, versão SFZ por kinwie),
 licença Creative Commons Atribuição 4.0 (CC BY 4.0): https://creativecommons.org/licenses/by/4.0/
 Amostras: https://github.com/sfzinstruments/WilkinsonAudio.NakedDrums — para este app, os microfones de pele, overhead e
