@@ -171,7 +171,7 @@ button { cursor: pointer; -webkit-tap-highlight-color: transparent; touch-action
 .single .pick { display: flex; flex-direction: column; justify-content: center; gap: 2px; font-size: 11.5px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; }
 .single .pick select { height: 34px; border: 1px solid var(--line); border-radius: 8px; background: var(--bg); font-size: 15px; font-weight: 600; text-transform: none; letter-spacing: 0; color: var(--fg); padding: 0 6px; }
 .pad.cym { --c: var(--cym); } .pad.drum { --c: var(--drum); } .pad.foot { --c: var(--foot); }
-.pad.rest { --c: var(--muted); grid-column: span 2; }
+.pad.rest { --c: var(--muted); grid-column: span 1; }
 .pad[data-inst="cowbell"], .pad[data-inst="cowbellFoot"], .pad[data-inst="agogoHi"], .pad[data-inst="agogoLo"] { white-space: normal; line-height: 1.05; }
 
 .sect { font-size: 11.5px; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); font-weight: 700; padding-top: 2px; }
@@ -216,7 +216,7 @@ button { cursor: pointer; -webkit-tap-highlight-color: transparent; touch-action
   #palette .pal { padding-left: 12px; padding-right: max(12px, env(safe-area-inset-right, 0px)); }
   .tabpanel, .pal.both .tabpanel { height: auto; overflow: visible; }
   .pads { grid-template-columns: repeat(4, minmax(0, 1fr)); }
-  .pad.rest { grid-column: span 2; }
+  .pad.rest { grid-column: span 1; }
   #desk > .gut.paperwrap { padding-left: max(12px, env(safe-area-inset-left, 0px)); padding-right: 12px; }
 }
 
@@ -373,6 +373,10 @@ button { cursor: pointer; -webkit-tap-highlight-color: transparent; touch-action
           <button id="b-alt">Manulação R L alternada</button>
           <button id="b-nostick">Tirar manulação</button>
           <button id="b-simile">Repetir anterior (%)</button>
+          <button id="b-rep2">Repetir 2 anteriores</button>
+          <button id="b-slash">Marcar tempo ( / / / / )</button>
+          <button id="b-mrest">Pausa de vários compassos</button>
+          <button id="b-fillmark">Indicação “Fill - - -”</button>
           <button id="b-rs">Início ‖:</button>
           <button id="b-re">Fim :‖</button>
           <button id="b-clear">Apagar notas (fica o compasso)</button>
@@ -404,7 +408,7 @@ button { cursor: pointer; -webkit-tap-highlight-color: transparent; touch-action
   <div class="gut"><div class="sheet-body">
     <div class="group" id="libList"></div>
     <div class="group"><h3>Importar</h3><div class="lib-item"><button class="open" id="libImport"><b>Importar um ritmo</b><span>De uma foto, print, arquivo MusicXML ou MIDI</span></button></div></div>
-    <div class="group"><h3>Modelo</h3><div class="lib-item"><button class="open" id="openExample"><b>Exercício de demonstração</b><span>Abre uma cópia nova do exemplo com todos os recursos</span></button></div></div>
+    <div class="group"><h3>Modelo</h3><div class="lib-item"><button class="open" id="openExample"><b>Exercício de demonstração</b><span>Abre uma cópia nova do exemplo com todos os recursos</span></button></div><div class="lib-item"><button class="open" id="openBigBand"><b>Parte de bateria de big band</b><span>Modelo com clave de fá, marcar tempo, figuras do naipe, fills, casas, D.S. e Coda</span></button></div></div>
     <div class="group"><h3>Cópia de segurança</h3>
       <div class="field"><button class="lnk" id="backupBtn">Exportar todas as partituras</button></div>
       <div class="field"><label class="lnk" for="importFile" style="cursor:pointer">Importar cópia de segurança</label><input type="file" id="importFile" accept=".json,application/json" hidden></div>
@@ -435,6 +439,8 @@ button { cursor: pointer; -webkit-tap-highlight-color: transparent; touch-action
       <div class="field"><label for="fRoom">Ambiência de sala</label><input type="checkbox" id="fRoom"></div>
     </div>
     <div class="group"><h3>Pauta</h3>
+      <div class="field"><label for="fClef">Clave</label><select id="fClef"><option value="perc">Clave de percussão ( ‖ )</option><option value="bass">Clave de fá (como nas partes de big band)</option></select></div>
+      <div class="field"><label for="fBarCount">Contar compassos repetidos<small>Mostra - 2 -, - 4 -… acima dos compassos de marcar tempo e de repetição, contando a partir de cada letra de ensaio</small></label><input type="checkbox" id="fBarCount"></div>
       <div class="field"><label for="fStaff">Tipo de pauta</label><select id="fStaff"><option value="kit">Bateria completa (5 linhas)</option><option value="single">Um instrumento (1 linha)</option><option value="both">1 linha + bateria, juntas (2 pautas)</option></select></div>
       <div class="field" id="fStaffPosRow"><label for="fStaffPos">Posição da pauta de 1 linha</label><select id="fStaffPos"><option value="above">Acima da bateria</option><option value="below">Abaixo da bateria</option></select></div>
       <div class="field" id="fStaffInstRow"><label for="fStaffInst">Instrumento da pauta de 1 linha<small>No modo de 1 linha, as notas já escritas passam a ser deste instrumento</small></label><select id="fStaffInst"></select></div>
@@ -468,8 +474,17 @@ button { cursor: pointer; -webkit-tap-highlight-color: transparent; touch-action
       <div class="field"><label for="mRepS">Início de repetição ‖:</label><input type="checkbox" id="mRepS"></div>
       <div class="field"><label for="mRepE">Fim de repetição :‖</label><input type="checkbox" id="mRepE"></div>
       <div class="field"><label for="mTimes">Quantas vezes tocar<small>Aparece como “×3” quando for mais de 2</small></label><select id="mTimes"><option value="2">2 vezes</option><option value="3">3 vezes</option><option value="4">4 vezes</option><option value="5">5 vezes</option><option value="6">6 vezes</option><option value="8">8 vezes</option></select></div>
-      <div class="field"><label for="mVolta">Casa (volta)</label><select id="mVolta"><option value="0">Nenhuma</option><option value="1">1ª casa</option><option value="2">2ª casa</option></select></div>
-      <div class="field"><label for="mSimile">Repetir o compasso anterior (%)</label><input type="checkbox" id="mSimile"></div>
+      <div class="field"><label for="mVolta">Casa (volta)</label><select id="mVolta"><option value="0">Nenhuma</option><option value="1">1ª casa</option><option value="2">2ª casa</option><option value="3">3ª casa</option><option value="4">4ª casa</option></select></div>
+      <div class="field" id="mVoltaTxtRow"><label for="mVoltaTxt">Texto da casa<small>Opcional. Ex.: 1.2.3. — toca nas voltas 1, 2 e 3</small></label><input type="text" id="mVoltaTxt" maxlength="16" placeholder="1."></div>
+    </div>
+    <div class="group"><h3>Conteúdo do compasso</h3>
+      <div class="field"><label for="mKind">O que aparece no compasso</label><select id="mKind"><option value="notes">Notas escritas</option><option value="one">Repetir o anterior (%)</option><option value="rep2">Repetir os 2 anteriores (% com 2)</option><option value="slash">Marcar tempo ( / / / / )</option><option value="mrest">Pausa de vários compassos</option></select></div>
+      <div class="field" id="mBarsRow"><label for="mBars">Quantos compassos de pausa</label><input type="number" id="mBars" min="2" max="999" inputmode="numeric"></div>
+      <div class="field"><label for="mFill">Indicação “Fill - - -” acima<small>Virada livre do baterista</small></label><input type="checkbox" id="mFill"></div>
+    </div>
+    <div class="group"><h3>Navegação</h3>
+      <div class="field"><label for="mNavS">No início do compasso</label><select id="mNavS"><option value="">Nada</option><option value="segno">Segno (𝄋)</option><option value="coda">Coda (⊕)</option></select></div>
+      <div class="field"><label for="mNavE">No fim do compasso</label><select id="mNavE"><option value="">Nada</option><option value="toCoda">To Coda ⊕</option><option value="dsCoda">D.S. al Coda</option><option value="dsFine">D.S. al Fine</option><option value="ds">D.S.</option><option value="dcCoda">D.C. al Coda</option><option value="dcFine">D.C. al Fine</option><option value="dc">D.C.</option><option value="fine">Fine</option></select></div>
     </div>
     <div class="group"><h3>Este compasso</h3>
       <div class="field"><button class="lnk" id="mInsert">Inserir compasso depois deste</button></div>
@@ -631,12 +646,13 @@ const INST = {
   crossStick: { name: 'Cross stick',         short: 'Cross',      step: 5,  head: 'cx',    cat: 'drum' },
   floorTom:   { name: 'Surdo',               short: 'Surdo',      step: 3,  head: 'n',     cat: 'drum' },
   floorTom2:  { name: 'Surdo 2',             short: 'Surdo 2',    step: 2,  head: 'n',     cat: 'drum' },
-  bass:       { name: 'Bumbo',               short: 'Bumbo',      step: 1,  head: 'n',     cat: 'foot' }
+  bass:       { name: 'Bumbo',               short: 'Bumbo',      step: 1,  head: 'n',     cat: 'foot' },
+  rhythm:     { name: 'Ritmo (cabeça em barra)', short: 'Ritmo /', step: 4, head: 'rs',   cat: 'drum' }
 };
 const PAD_ORDER = ['hiHat', 'snare', 'bass', 'tom1', 'tom2', 'floorTom',
                    'hiHatOpen', 'hiHatHalf', 'hiHatPedal', 'ride', 'rideBell', 'crash',
                    'tom3', 'floorTom2', 'rimshot', 'crossStick', 'china', 'splash',
-                   'cowbell', 'cowbellFoot', 'agogoHi', 'agogoLo'];
+                   'cowbell', 'cowbellFoot', 'agogoHi', 'agogoLo', 'rhythm'];
 // instrumentos possíveis numa pauta de uma linha ('agogo' = agudo acima da linha e grave abaixo)
 const STAFF_INSTS = ['agogo', ...PAD_ORDER];
 const staffInstName = k => k === 'agogo' ? 'Agogô (agudo e grave)' : (INST[k] ? INST[k].name : k);
@@ -658,6 +674,18 @@ const timeLabel = t => t.symbol === 'common' ? 'C' : t.symbol === 'cut' ? '¢' :
 const newMeasure = time => ({ id: uid(), time: { ...time }, events: [], repeatStart: false, repeatEnd: false });
 const stickTxt = (style, s) => s === 'R' ? (style === 'de' ? 'D' : 'R') : s === 'L' ? (style === 'de' ? 'E' : 'L') : '';
 const visibleEvents = m => m.simile ? [] : m.events;
+// Compassos "especiais" (sem notas próprias): m.simile = true e m.kind diz qual
+// one = repete o anterior (%) · slash = marcar tempo (/ / / /) · rep2/rep2b = repete os 2 anteriores · mrest = pausa de vários compassos
+const KIND_NAME = { one: 'repete o anterior (%)', slash: 'marcar tempo ( / / / / )', rep2: 'repete os 2 compassos anteriores', rep2b: 'repete os 2 compassos anteriores', mrest: 'pausa de vários compassos' };
+const mKind = m => m.simile ? (KIND_NAME[m.kind] ? m.kind : 'one') : 'notes';
+const kindName = m => KIND_NAME[mKind(m)] || KIND_NAME.one;
+const canFirst = m => m.simile && (m.kind === 'slash' || m.kind === 'mrest');
+const barsOf = m => m.simile && m.kind === 'mrest' ? Math.max(2, m.restBars | 0) : 1;
+function barNumbers(sc) { const out = []; let n = 1; sc.measures.forEach(m => { out.push(n); n += barsOf(m); }); return out; }
+function barCounts(sc) { const out = []; let c = 0; sc.measures.forEach(m => { if (m.label) c = 0; c += barsOf(m); out.push(c); }); return out; }
+const slashBeats = t => t.unit >= 8 && t.beats % 3 === 0 && t.beats > 3 ? t.beats / 3 : t.beats;
+const NAV_END = { fine: 'Fine', toCoda: 'To Coda', ds: 'D.S.', dsCoda: 'D.S. al Coda', dsFine: 'D.S. al Fine', dc: 'D.C.', dcCoda: 'D.C. al Coda', dcFine: 'D.C. al Fine' };
+const voltaSet = m => { if (!m.volta) return null; const d = String(m.voltaText || '').match(/\d+/g); return d ? d.map(Number) : [m.volta]; };
 const hasText = t => !!(t && ((t.title && t.title.trim()) || (t.body && t.body.trim())));
 
 /* ================= Texto formatado (lições e anotações) ================= */
@@ -831,8 +859,9 @@ function layoutSystems(score, width, sp, originX, opts) {
     let hasAcc = false, hasTup = false, hasStk = false, hasDyn = false, hasLabel = false, hasVolta = false, hasTimes = false, hasNoteText = false, hasDown = false;
     const measures = line.map(i => {
       const inf = infos[i], m = ms[i], x0 = x;
-      if (m.label) hasLabel = true;
+      if (m.label || m.navStart || m.navEnd) hasLabel = true;
       if (m.volta) hasVolta = true;
+      if (m.fillMark) hasNoteText = true;
       if (m.repeatEnd && (m.repeatTimes || 2) > 2) hasTimes = true;
       const timeX = x0 + (m.repeatStart ? sp * 1.6 : 0) + sp * 0.5 + inf.timeW / 2;
       const contentX = x0 + inf.leading;
@@ -874,7 +903,7 @@ const kitEv = (sc, m) => isBoth(sc) && sc.staff.active === 'upper' ? (m.alt || [
 const upEv = (sc, m) => isBoth(sc) && sc.staff.active === 'upper' ? m.events : (m.alt || []);
 const lineBelow = sc => isBoth(sc) && sc.staff.pos === 'below';
 function staffViews(sc) {
-  const below = lineBelow(sc), plain = m => ({ ...m, label: '', volta: 0, repeatTimes: 2 });
+  const below = lineBelow(sc), plain = m => ({ ...m, label: '', volta: 0, repeatTimes: 2, navStart: '', navEnd: '', fillMark: false, noCount: true });
   return {
     kit: { ...sc, staff: { type: 'kit' }, measures: sc.measures.map(m => ({ ...(below ? m : plain(m)), events: kitEv(sc, m) })) },
     up: { ...sc, staff: { type: 'single', inst: sc.staff.inst }, measures: sc.measures.map(m => ({ ...(below ? plain(m) : m), events: upEv(sc, m) })) }
@@ -960,9 +989,13 @@ function drawSystem(ctx, score, s, o) {
   else for (let i = 0; i < 5; i++) { ctx.moveTo(s.x0, top + i * sp); ctx.lineTo(s.x1, top + i * sp); }
   ctx.stroke();
   const cx = s.x0 + sp;
-  ctx.fillRect(cx, top + sp, sp * 0.5, 2 * sp);
-  ctx.fillRect(cx + sp, top + sp, sp * 0.5, 2 * sp);
-  if (!o.isFirst && s.measures.length) text(String(s.measures[0].index + 1), `italic ${sp * 1.3}px Georgia, serif`, s.x0 + sp * 0.8, top - sp * 1.8);
+  const barNo = barNumbers(score), counts = barCounts(score);
+  if (!single && score.clef === 'bass') drawBassClef(s.x0 + sp * 0.5);
+  else {
+    ctx.fillRect(cx, top + sp, sp * 0.5, 2 * sp);
+    ctx.fillRect(cx + sp, top + sp, sp * 0.5, 2 * sp);
+  }
+  if (!o.isFirst && s.measures.length) text(String(barNo[s.measures[0].index]), `italic ${sp * 1.3}px Georgia, serif`, s.x0 + sp * 0.8, top - sp * 1.8);
   else if (single && !o.noName) text(score.staff.inst === 'agogo' ? 'Agogô' : staffInstName(score.staff.inst), `italic ${sp * 1.35}px Georgia, serif`, s.x0 + sp * 0.6, top - sp * 0.4, 'left');
   s.measures.forEach(drawMeasure);
   drawTies();
@@ -1024,6 +1057,74 @@ function drawSystem(ctx, score, s, o) {
     }
   }
 
+  function drawBassClef(x) {
+    const y4 = top + sp;
+    ink(); dot(x + sp * 0.5, y4 + sp * 0.05, sp * 0.45);
+    ctx.lineWidth = sp * 0.3; ctx.lineCap = 'round'; ctx.beginPath();
+    ctx.moveTo(x + sp * 0.15, y4 - sp * 0.05);
+    ctx.bezierCurveTo(x + sp * 0.15, y4 - sp * 1.25, x + sp * 2.35, y4 - sp * 1.35, x + sp * 2.3, y4 + sp * 0.35);
+    ctx.bezierCurveTo(x + sp * 2.25, y4 + sp * 1.7, x + sp * 1.1, y4 + sp * 2.6, x - sp * 0.1, y4 + sp * 3.05);
+    ctx.stroke(); ctx.lineCap = 'butt';
+    dot(x + sp * 2.95, y4 - sp * 0.5, sp * 0.22); dot(x + sp * 2.95, y4 + sp * 0.5, sp * 0.22);
+  }
+  function slashMark(x, cy, open) {
+    ctx.beginPath();
+    ctx.moveTo(x - sp * 1.0, cy + sp); ctx.lineTo(x - sp * 0.45, cy + sp); ctx.lineTo(x + sp * 1.0, cy - sp); ctx.lineTo(x + sp * 0.45, cy - sp); ctx.closePath();
+    if (open) { ctx.lineWidth = sp * 0.16; ctx.stroke(); } else ctx.fill();
+  }
+  function drawSimile2(cxs) {
+    ink();
+    [-0.6, 0.6].forEach(d => { ctx.beginPath();
+      ctx.moveTo(cxs + d * sp - sp * 1.15, top + 3.1 * sp); ctx.lineTo(cxs + d * sp - sp * 0.6, top + 3.1 * sp);
+      ctx.lineTo(cxs + d * sp + sp * 1.15, top + 0.9 * sp); ctx.lineTo(cxs + d * sp + sp * 0.6, top + 0.9 * sp); ctx.closePath(); ctx.fill(); });
+    dot(cxs - sp * 1.75, top + 1.35 * sp, sp * 0.33); dot(cxs + sp * 1.75, top + 2.65 * sp, sp * 0.33);
+    capText('2', `bold ${sp * 2.1}px Georgia, "Times New Roman", serif`, cxs, top - sp * 1.3);
+  }
+  function drawCoda(x, y) {
+    ink(); ctx.lineWidth = sp * 0.2; ctx.beginPath(); ctx.ellipse(x, y, sp * 0.7, sp * 0.95, 0, 0, TAU); ctx.stroke();
+    ctx.lineWidth = sp * 0.14; ctx.beginPath(); ctx.moveTo(x - sp * 1.3, y); ctx.lineTo(x + sp * 1.3, y); ctx.moveTo(x, y - sp * 1.35); ctx.lineTo(x, y + sp * 1.35); ctx.stroke();
+  }
+  function drawSegno(x, y) {
+    ink(); capText('S', `italic bold ${sp * 2.6}px Georgia, "Times New Roman", serif`, x, y);
+    seg(x - sp * 0.95, y + sp * 1.0, x + sp * 0.95, y - sp * 1.0, sp * 0.16);
+    dot(x - sp * 0.95, y + sp * 0.3, sp * 0.22); dot(x + sp * 0.95, y - sp * 0.3, sp * 0.22);
+  }
+  function drawSpecial(m, lm) {
+    const k = mKind(m), mid = (lm.contentX + lm.contentEnd) / 2, cy = top + 2 * sp;
+    let countX = mid;
+    ink();
+    if (k === 'slash') {
+      const n = slashBeats(m.time), w = (lm.contentEnd - lm.contentX) / n;
+      for (let j = 0; j < n; j++) slashMark(lm.contentX + w * (j + 0.5), cy);
+    } else if (k === 'mrest') {
+      const a = lm.contentX + sp * 0.4, b = lm.contentEnd - sp * 0.4;
+      ctx.fillRect(a, top + 1.5 * sp, b - a, sp);
+      ctx.fillRect(a - lineW, top + sp, lineW * 2.4, 2 * sp); ctx.fillRect(b - lineW * 1.4, top + sp, lineW * 2.4, 2 * sp);
+      capText(String(barsOf(m)), `bold ${sp * 2.3}px Georgia, "Times New Roman", serif`, mid, top - sp * 1.5);
+      return;
+    } else if (k === 'rep2b') {
+      const pm = score.measures[lm.index - 1];
+      const prevHere = s.measures.some(x => x.index === lm.index - 1) && pm && mKind(pm) === 'rep2';
+      if (prevHere) drawSimile2(lm.x0);   // na quebra de linha o sinal fica só no 1º compasso do par
+    } else if (k === 'rep2') {
+      const nm = score.measures[lm.index + 1];
+      const nextHere = s.measures.some(x => x.index === lm.index + 1) && nm && mKind(nm) === 'rep2b';
+      if (!nextHere) { drawSimile2(mid); countX = mid + sp * 3.6; }
+    } else drawSimile(mid);
+    const c = counts[lm.index];
+    if (score.countBars !== false && !m.noCount && !m.fillMark && c % 2 === 0) {
+      ink(); text('- ' + c + ' -', `600 ${sp * 1.2}px Barlow, Helvetica, sans-serif`, Math.min(countX, lm.x1 - sp * 2), top - sp * 1.5);
+    }
+  }
+  function drawFillMark(m, lm) {
+    const y = top - s.basePad - sp * 1.0, f = `bold italic ${sp * 1.35}px Georgia, "Times New Roman", serif`;
+    const prev = score.measures[lm.index - 1], cont = prev && prev.fillMark && s.measures.some(x => x.index === lm.index - 1);
+    let x = lm.x0;
+    ink();
+    if (!cont) { text('Fill', f, lm.contentX - sp * 0.4, y, 'left'); ctx.font = f; x = lm.contentX - sp * 0.4 + ctx.measureText('Fill').width + sp * 0.6; }
+    ctx.save(); ctx.setLineDash([sp * 0.55, sp * 0.45]); seg(x, y, lm.x1 - sp * 0.2, y, sp * 0.12); ctx.restore();
+  }
+
   function repDots(x) { dot(x, top + 1.5 * sp, sp * 0.25); dot(x, top + 2.5 * sp, sp * 0.25); }
 
   function drawMeasure(lm) {
@@ -1038,8 +1139,9 @@ function drawSystem(ctx, score, s, o) {
     }
     if (lm.showTime) drawTime(m.time, lm.timeX);
     drawAbove(m, lm);
+    if (m.fillMark) drawFillMark(m, lm);
     if (m.simile) {
-      drawSimile((lm.contentX + lm.contentEnd) / 2);
+      drawSpecial(m, lm);
     } else {
       const geos = lm.events.map((le, i) => isRest(m.events[i]) ? null : geom(m.events[i], le.headX));
       const bgs = [];
@@ -1082,20 +1184,34 @@ function drawSystem(ctx, score, s, o) {
     const T = s.hasNoteText ? sp * 2.4 : 0;
     const voltaY = top - s.basePad - T - sp * 0.7;
     if (m.volta) {
-      const y = voltaY - sp * 0.9, xL = lm.x0 + sp * 0.4, xR = lm.x1 - sp * 0.6;
+      const prev = score.measures[lm.index - 1], next = score.measures[lm.index + 1];
+      const same = x => x && x.volta === m.volta && (x.voltaText || '') === (m.voltaText || '');
+      const cont = same(prev) && s.measures.some(x => x.index === lm.index - 1);
+      const y = voltaY - sp * 0.9, xL = lm.x0 + sp * (cont ? 0 : 0.4), xR = lm.x1 - sp * 0.6;
+      const close = next ? (next.volta && !same(next)) : m.volta === 1;
       ctx.lineWidth = sp * 0.13; ctx.beginPath();
-      ctx.moveTo(xL, y + sp * 1.6); ctx.lineTo(xL, y); ctx.lineTo(xR, y);
-      if (m.volta === 1) ctx.lineTo(xR, y + sp * 1.6);
+      if (!cont) { ctx.moveTo(xL, y + sp * 1.6); ctx.lineTo(xL, y); } else ctx.moveTo(xL, y);
+      ctx.lineTo(same(next) ? lm.x1 : xR, y);
+      if (close && !same(next)) ctx.lineTo(xR, y + sp * 1.6);
       ctx.stroke();
-      text(m.volta + '.', `bold ${sp * 1.3}px Georgia, serif`, xL + sp * 0.5, y + sp * 1.0, 'left');
+      if (!cont) text(m.voltaText || (m.volta + '.'), `bold ${sp * 1.3}px Georgia, serif`, xL + sp * 0.5, y + sp * 1.0, 'left');
     }
+    const ly = top - s.basePad - T - (s.hasVolta ? sp * 3.6 : sp * 1.5);
+    let lx = lm.x0 + sp * 0.2;
     if (m.label) {
-      const y = top - s.basePad - T - (s.hasVolta ? sp * 3.6 : sp * 1.5);
       ctx.font = `bold ${sp * 1.45}px Barlow, Helvetica, sans-serif`;
       const w = ctx.measureText(m.label).width + sp * 1.2;
-      const x = lm.x0 + sp * 0.2;
-      ctx.lineWidth = sp * 0.12; rrect(x, y - sp * 1.05, w, sp * 2.1, sp * 0.3); ctx.stroke();
-      text(m.label, `bold ${sp * 1.45}px Barlow, Helvetica, sans-serif`, x + sp * 0.6, y + sp * 0.05, 'left');
+      ctx.lineWidth = sp * 0.12; rrect(lx, ly - sp * 1.05, w, sp * 2.1, sp * 0.3); ctx.stroke();
+      text(m.label, `bold ${sp * 1.45}px Barlow, Helvetica, sans-serif`, lx + sp * 0.6, ly + sp * 0.05, 'left');
+      lx += w + sp * 0.5;
+    }
+    if (m.navStart === 'segno') drawSegno(lx + sp * 1.2, ly);
+    if (m.navStart === 'coda') drawCoda(lx + sp * 1.4, ly);
+    if (m.navEnd && NAV_END[m.navEnd]) {
+      const f = `bold italic ${sp * 1.4}px Georgia, "Times New Roman", serif`, xr = lm.x1 - sp * 0.3;
+      ink();
+      if (m.navEnd === 'toCoda') { text(NAV_END.toCoda, f, xr - sp * 3.0, ly, 'right'); drawCoda(xr - sp * 1.4, ly); }
+      else text(NAV_END[m.navEnd], f, xr, ly, 'right');
     }
   }
 
@@ -1254,6 +1370,11 @@ function drawSystem(ctx, score, s, o) {
         p.addPath(a); p.addPath(b); ctx.fill(p, 'evenodd');
       }
       if (type === 'slash') seg(x - sp * 0.35, y + sp * 0.75, x + w + sp * 0.35, y - sp * 0.75, sp * 0.14);
+    } else if (type === 'rs') {
+      const cy = y;
+      ctx.beginPath();
+      ctx.moveTo(x - sp * 0.15, cy + sp * 0.95); ctx.lineTo(x + w * 0.38, cy + sp * 0.95); ctx.lineTo(x + w + sp * 0.15, cy - sp * 0.95); ctx.lineTo(x + w * 0.62, cy - sp * 0.95); ctx.closePath();
+      if (filledH) ctx.fill(); else { ctx.lineWidth = sp * 0.15; ctx.stroke(); }
     } else if (type === 'x' || type === 'cx') {
       const i = sp * 0.12;
       ctx.lineWidth = sp * 0.16; ctx.beginPath();
@@ -1639,6 +1760,7 @@ function findSound(inst) {
 // Um toque de um instrumento. vel: 0.15 (fantasma) … 1.3 (ff acentuado). Devolve o ganho (para abafar depois).
 function hit(ac, dest, inst, t, vel, opt) {
   t = Math.max(t, 0);
+  if (inst === 'rhythm') inst = 'snare';   // figuras rítmicas tocam na caixa
   const f = findSound(inst);
   if (!f) { const ps = SOUND[inst] || []; let g = null; ps.forEach(([k, p]) => { g = voice(ac, dest, k, p, t, vel); }); return g; }
   // camada de intensidade: a primeira cuja intensidade alcança o toque
@@ -1684,21 +1806,49 @@ function makeBus(ac, room) {
   return { input, master };
 }
 
+// Ordem de execução: ritornelos, casas (1., 2., "1.2.3." …), D.S./D.C., To Coda e Fine.
+// Depois do D.S./D.C. os ritornelos não se repetem e só a última casa é tocada.
 function playOrder(ms) {
-  const out = []; let start = 0, pass = 1, i = 0, guard = 0;
+  const out = []; let start = 0, pass = 1, i = 0, guard = 0, jumped = false;
+  const segno = ms.findIndex(m => m.navStart === 'segno');
   while (i < ms.length && guard++ < 5000) {
     const m = ms[i];
     if (m.repeatStart && start !== i) { start = i; pass = 1; }
-    const skip = m.volta === 1 && pass > 1;
+    const V = voltaSet(m);
+    let skip = false;
+    if (V && jumped) {
+      for (let j = i + 1; j < ms.length && j - i <= 16; j++) {
+        const W = voltaSet(ms[j]);
+        if (!W) { if (ms[j].repeatStart) break; continue; }
+        if (Math.max(...W) > Math.max(...V)) { skip = true; break; }
+      }
+    } else if (V) skip = !V.includes(pass);
     if (!skip) out.push(i);
-    if (m.repeatEnd && !skip) {
+    if (!skip && m.repeatEnd && !jumped) {
       const times = m.repeatTimes || 2;
       if (pass < times) { pass++; i = start; continue; }
       pass = 1; start = i + 1;
-    } else if (!skip && m.volta === 2) { pass = 1; start = i + 1; }
+    } else if (!skip && V && !m.repeatEnd && !(ms[i + 1] && ms[i + 1].volta)) { pass = 1; start = i + 1; }
+    if (!skip) {
+      const ne = m.navEnd || '';
+      if (jumped && ne === 'fine') break;
+      if (jumped && ne === 'toCoda') { const c = ms.findIndex((x, j) => j > i && x.navStart === 'coda'); if (c > 0) { i = c; start = c; continue; } }
+      if (!jumped && /^(ds|dc)/.test(ne)) { jumped = true; pass = 1; i = ne.startsWith('ds') && segno >= 0 ? segno : 0; start = i; continue; }
+    }
     i++;
   }
   return out;
+}
+// de onde vêm as notas de um compasso especial (% , / / / /, repetição de 2)
+function soundSource(ms, mi, d = 0) {
+  const m = ms[mi];
+  if (!m || d > 60) return -1;
+  if (!m.simile) return mi;
+  const k = mKind(m);
+  if (k === 'mrest') return -1;
+  if (k === 'rep2' || k === 'rep2b') return mi >= 2 ? soundSource(ms, mi - 2, d + 1) : -1;
+  for (let j = mi - 1; j >= 0; j--) { if (mKind(ms[j]) === 'mrest') continue; return soundSource(ms, j, d + 1); }
+  return -1;
 }
 function scoreBpm(score) { return score.tempo > 0 ? score.tempo : (score.playBpm || 90); }
 // o: { from, bpm, metro, countIn, reps }
@@ -1715,16 +1865,16 @@ function buildTimeline(score, o) {
     for (const mi of order.slice(from)) {
       const m = score.measures[mi];
       let src = m;
-      if (m.simile) { for (let k = mi - 1; k >= 0; k--) if (!score.measures[k].simile) { src = score.measures[k]; break; } }
-      const mStart = t;
-      if (o.metro) { let ct = mStart; beatsOf(m).forEach((b, k) => { clicks.push({ t: ct, strong: k === 0 }); ct += b; }); }
-      (src.simile ? [] : src.events).forEach((e, k) => {
+      if (m.simile) { const r = soundSource(score.measures, mi); src = r >= 0 ? score.measures[r] : null; }
+      const mStart = t, nb = barsOf(m);
+      if (o.metro) { let ct = mStart; for (let b = 0; b < nb; b++) beatsOf(m).forEach((bt, k) => { clicks.push({ t: ct, strong: k === 0 }); ct += bt; }); }
+      (src && !src.simile ? src.events : []).forEach((e, k) => {
         const d = fval(dur(e)) * whole;
         items.push({ t, d, e, ref: { m: mi, i: m.simile ? -1 : k }, skip: prevTie && prevNotes ? prevNotes : [] });
         prevNotes = e.notes.map(n => n.inst); prevTie = !!e.tie;
         t += d;
       });
-      const mLen = fval(cap(m.time)) * whole;
+      const mLen = fval(cap(m.time)) * whole * nb;
       if (t < mStart + mLen - 1e-6) { items.push({ t, d: mStart + mLen - t, e: null, ref: { m: mi, i: -1 }, skip: [] }); t = mStart + mLen; }
     }
   }
@@ -1893,6 +2043,39 @@ function sampleScore() {
                M(six8, m5, { rs: 1, text: { title: 'Exercício 3 — Compasso 6/8', body: 'Conte em dois tempos: **1** 2 3 **4** 5 6.', newPage: false } }), M(six8, m6, { re: 1, volta: 1 }), M(six8, clone(m6).map(e => ({ ...e, id: uid() })).slice(0, 2).concat([ev(4, ['crash'], { accent: 'accent' })]), { volta: 2 }),
                M(four, m7, { label: 'Final' }), M(four, m8)] };
 }
+// Modelo no estilo das partes de bateria de big band
+function bigBandScore() {
+  const four = { beats: 4, unit: 4, symbol: 'common' };
+  const ev = (value, insts, o = {}) => ({ id: uid(), value, dots: o.dots || 0, notes: insts.map(k => ({ inst: k, ghost: false })), tuplet: null,
+    accent: o.accent || 'none', ornament: 'none', sticking: 'none', tie: !!o.tie, dyn: o.dyn || '', choke: false, text: o.text || '' });
+  const M = (events, x = {}) => ({ id: uid(), time: { ...four }, events, alt: [], repeatStart: !!x.rs, repeatEnd: !!x.re, repeatTimes: x.times || 2,
+    volta: x.volta || 0, voltaText: x.vt || '', label: x.label || '', simile: !!x.kind, kind: x.kind || '', restBars: x.bars || 0,
+    navStart: x.ns || '', navEnd: x.ne || '', fillMark: !!x.fill, textBefore: x.text || null });
+  const groove = (dyn) => {
+    const a = [];
+    for (let i = 0; i < 8; i++) {
+      const ins = [i === 0 ? 'crash' : 'hiHat'];
+      if (i === 0 || i === 3 || i === 4) ins.push('bass');
+      if (i === 2 || i === 6) ins.push('snare');
+      a.push(ev(8, ins, { accent: i === 2 || i === 6 ? 'accent' : 'none', dyn: i === 0 ? dyn : '' }));
+    }
+    return a;
+  };
+  const figA = () => [ev(4, ['rhythm'], { accent: 'accent' }), ev(8, []), ev(8, ['rhythm'], { accent: 'accent', tie: true }), ev(2, ['rhythm'])];
+  const figB = () => [ev(8, ['rhythm'], { accent: 'accent' }), ev(8, ['rhythm'], { accent: 'accent' }), ev(8, []), ev(8, ['rhythm'], { accent: 'marcato' }), ev(4, []), ev(4, ['rhythm'], { accent: 'marcato' })];
+  const hit = () => [ev(4, ['crash', 'bass'], { accent: 'marcato', dyn: 'ff' }), ev(4, []), ev(2, [])];
+  return { id: uid(), title: 'Parte de big band', subtitle: 'Modelo — Disco-funk', author: '', tempo: 112, playBpm: 112, perLine: 0, paper: 'a4', sticking: 'rl',
+    clef: 'bass', countBars: true, modified: Date.now(), playback: { metro: false, loop: false, countIn: true },
+    intro: '**Como ler:** as barras ( / / / / ) pedem para manter o groove; os números - 2 -, - 4 - contam os compassos desde a letra de ensaio. As figuras com cabeça em barra são as do naipe: marque-as com prato e bumbo e preencha o resto. “Fill - - -” pede uma virada livre.',
+    measures: [
+      M(groove('f'), { label: 'Intro', rs: true }), M([], { kind: 'one' }), M(figA()), M([], { kind: 'slash', fill: true, re: true }),
+      M(groove('mf'), { label: 'A', ns: 'segno' }), M([], { kind: 'slash' }), M([], { kind: 'slash' }), M([], { kind: 'slash' }),
+      M([], { kind: 'rep2' }), M([], { kind: 'rep2b' }), M([], { kind: 'slash' }), M([], { kind: 'slash', fill: true }),
+      M(figB(), { label: 'B', rs: true }), M([], { kind: 'slash' }), M(figA()), M([], { kind: 'slash', fill: true, volta: 1, re: true }),
+      M(figB(), { volta: 2, ne: 'toCoda' }), M([], { kind: 'mrest', bars: 8, label: 'C' }), M([], { kind: 'slash' }), M([], { kind: 'slash', fill: true, ne: 'dsCoda' }),
+      M(figA(), { ns: 'coda' }), M(figB()), M([], { kind: 'slash', fill: true }), M(hit())
+    ] };
+}
 function blankScore(n) {
   return { id: uid(), title: 'Exercício ' + n, subtitle: '', author: '', tempo: 0, perLine: 0, paper: 'a4', sticking: 'rl',
     modified: Date.now(), playback: { metro: true, loop: false, countIn: true },
@@ -1945,6 +2128,8 @@ function normalize(score) {
   score.playback = score.playback || { metro: true, loop: false, countIn: true };
   if (score.intro == null) score.intro = '';
   if (!score.staff) score.staff = { type: 'kit', inst: 'snare' };
+  if (!score.clef) score.clef = 'perc';
+  if (score.countBars == null) score.countBars = true;
   if (!score.staff.active) score.staff.active = 'kit';
   score.measures.forEach(m => { if (!Array.isArray(m.alt)) m.alt = []; });
   score.measures.forEach(m => {
@@ -1952,6 +2137,10 @@ function normalize(score) {
     if (m.volta == null) m.volta = 0;
     if (m.label == null) m.label = '';
     m.simile = !!m.simile;
+    if (m.kind == null) m.kind = '';
+    if (m.navStart == null) m.navStart = '';
+    if (m.navEnd == null) m.navEnd = '';
+    m.fillMark = !!m.fillMark;
     if (m.textBefore === undefined) m.textBefore = null;
     m.events.forEach(e => { if (e.text == null) e.text = ''; if (e.tie == null) e.tie = false; if (e.dyn == null) e.dyn = ''; if (e.choke == null) e.choke = false; if (!e.ornament) e.ornament = 'none'; });
   });
@@ -2099,7 +2288,7 @@ function insert(notes) {
   const s = clone(S.score);
   let m = Math.max(0, Math.min(S.cursor.m, s.measures.length - 1));
   let i = Math.min(S.cursor.i, s.measures[m].events.length);
-  if (s.measures[m].simile) { msg('Este compasso repete o anterior (%). Desligue em Compasso › Repetir anterior.'); return; }
+  if (s.measures[m].simile) { msg(`Este compasso está como “${kindName(s.measures[m])}”. Para escrever notas, desligue na aba Compasso.`); return; }
   while (i >= visibleEvents(s.measures[m]).length && fcmp(remaining(s.measures[m]), ZERO) <= 0) {
     m++; i = 0;
     if (m >= s.measures.length) s.measures.push(newMeasure(s.measures[m - 1].time));
@@ -2198,13 +2387,13 @@ function deleteMeasure(i) {
     if (hasText(gone.textBefore) && next && !hasText(next.textBefore)) next.textBefore = gone.textBefore;
     if (next && gone.repeatStart && !next.repeatStart && !gone.repeatEnd) next.repeatStart = true;
     s.measures.splice(i, 1);
-    if (s.measures[0]) s.measures[0].simile = false;
+    if (s.measures[0] && !canFirst(s.measures[0])) s.measures[0].simile = false;
   });
   S.selection = null;
   const m = Math.min(i, S.score.measures.length - 1);
   S.cursor = { m, i: visibleEvents(S.score.measures[m]).length }; render();
 }
-const isEmptyMeasure = m => !m.simile && !m.events.length && !(m.alt && m.alt.length) && !hasText(m.textBefore) && !m.label;
+const isEmptyMeasure = m => !m.simile && !m.events.length && !(m.alt && m.alt.length) && !hasText(m.textBefore) && !m.label && !m.navStart && !m.navEnd && !m.fillMark;
 function eraseEmptyMeasures() {
   const empty = S.score.measures.filter(isEmptyMeasure).length;
   if (!empty) { flash('Não há compassos vazios para apagar'); return; }
@@ -2212,7 +2401,7 @@ function eraseEmptyMeasures() {
   edit(s => {
     s.measures = s.measures.filter(m => !isEmptyMeasure(m));
     if (!s.measures.length) s.measures = [newMeasure({ beats: 4, unit: 4, symbol: 'numeric' })];
-    s.measures[0].simile = false;
+    if (!canFirst(s.measures[0])) s.measures[0].simile = false;
   });
   S.selection = null; S.cursor = { m: S.score.measures.length - 1, i: visibleEvents(S.score.measures[S.score.measures.length - 1]).length };
   render();
@@ -2261,6 +2450,27 @@ function altSticking(i, clear) {
   edit(s => { let h = 'R'; s.measures[i].events.forEach(e => { if (isRest(e)) return; e.sticking = clear ? 'none' : h; h = h === 'R' ? 'L' : 'R'; }); });
   render();
 }
+// muda o conteúdo do compasso: 'notes' | 'one' | 'slash' | 'rep2' | 'mrest'
+function applyKind(i, kind, bars) {
+  const m = S.score.measures[i];
+  if (kind === 'one' && i === 0) { msg('O primeiro compasso não tem anterior para repetir'); return false; }
+  if (kind === 'rep2' && i < 2) { msg('Para repetir 2 compassos, é preciso ter 2 compassos antes'); return false; }
+  edit(s => {
+    const a = s.measures[i], k0 = mKind(a);
+    const pair = k0 === 'rep2' ? i + 1 : k0 === 'rep2b' ? i - 1 : -1;
+    if (pair >= 0 && s.measures[pair] && /^rep2/.test(mKind(s.measures[pair]))) { s.measures[pair].simile = false; s.measures[pair].kind = ''; }
+    if (kind === 'notes') { a.simile = false; a.kind = ''; return; }
+    a.simile = true; a.kind = kind;
+    if (kind === 'mrest') a.restBars = Math.max(2, Math.min(999, bars || a.restBars || 4));
+    if (kind === 'rep2') {
+      if (!s.measures[i + 1]) { const n = newMeasure(a.time); n.alt = []; s.measures.push(n); }
+      const b = s.measures[i + 1]; b.simile = true; b.kind = 'rep2b';
+    }
+  });
+  S.selection = null; clampCursor(); render();
+  return true;
+}
+function toggleKind(i, kind) { const k = mKind(S.score.measures[i]); applyKind(i, k === kind || (kind === 'rep2' && k === 'rep2b') ? 'notes' : kind); }
 function toggleMeasureFlag(i, key) {
   if (key === 'simile' && i === 0) { msg('O primeiro compasso não tem anterior para repetir'); return; }
   edit(s => { s.measures[i][key] = !s.measures[i][key]; });
@@ -2278,7 +2488,7 @@ function applyMeasure(i, time, follow, extra) {
       while (fcmp(alt.reduce((a, e) => fadd(a, dur(e)), ZERO), cap(time)) > 0) { alt.pop(); trimmed = true; }
     }
     Object.assign(s.measures[i], extra);
-    if (i === 0) s.measures[0].simile = false;
+    if (i === 0 && !canFirst(s.measures[0])) s.measures[0].simile = false;
   });
   S.selection = null; clampCursor();
   S.message = trimmed ? 'Notas que excediam a nova fórmula de compasso foram removidas' : '';
@@ -2357,7 +2567,11 @@ function buildPalette() {
   $('#b-fill').onclick = () => fillRests(cm());
   $('#b-alt').onclick = () => altSticking(cm(), false);
   $('#b-nostick').onclick = () => altSticking(cm(), true);
-  $('#b-simile').onclick = () => toggleMeasureFlag(cm(), 'simile');
+  $('#b-simile').onclick = () => toggleKind(cm(), 'one');
+  $('#b-rep2').onclick = () => { const i = cm(); toggleKind(i, mKind(S.score.measures[i]) === 'rep2b' ? 'rep2b' : 'rep2'); };
+  $('#b-slash').onclick = () => toggleKind(cm(), 'slash');
+  $('#b-mrest').onclick = () => { const i = cm(); if (mKind(S.score.measures[i]) === 'mrest') { applyKind(i, 'notes'); return; } if (applyKind(i, 'mrest', 4)) flash('Pausa de 4 compassos. Mude o número em “Fórmula, seção e casas…”'); };
+  $('#b-fillmark').onclick = () => toggleMeasureFlag(cm(), 'fillMark');
   $('#b-rs').onclick = () => toggleMeasureFlag(cm(), 'repeatStart');
   $('#b-re').onclick = () => toggleMeasureFlag(cm(), 'repeatEnd');
   $('#b-del').onclick = () => {
@@ -2420,7 +2634,7 @@ function renderStatus() {
   const sel = evAt(S.selection);
   const head = (isBoth(S.score) ? (S.score.staff.active === 'upper' ? (S.score.staff.inst === 'agogo' ? 'Agogô' : staffInstName(S.score.staff.inst)) : 'Bateria') + ' · ' : '') + `Comp. ${i + 1}/${S.score.measures.length} · ${timeLabel(m.time)}`;
   if (sel) { st.innerHTML = ''; st.append(head + ' · '); const b = document.createElement('b'); b.textContent = describe(sel); st.append(b); return; }
-  st.textContent = m.simile ? `${head} · repete o anterior (%)` : `${head} · ${beatsTxt(filled(m), m.time.unit)} de ${m.time.beats} tempos`;
+  st.textContent = m.simile ? `${head} · ${kindName(m)}${mKind(m) === 'mrest' ? ' (' + barsOf(m) + ')' : ''}` : `${head} · ${beatsTxt(filled(m), m.time.unit)} de ${m.time.beats} tempos`;
 }
 
 function renderPalette() {
@@ -2457,7 +2671,9 @@ function renderPalette() {
   const sel = evAt(S.selection);
   document.querySelectorAll('.pad[data-inst]').forEach(b => b.classList.toggle('in', !!sel && sel.notes.some(n => n.inst === b.dataset.inst)));
   const m = S.score.measures[curMeasure()];
-  $('#b-simile').classList.toggle('on', !!m.simile); $('#b-rs').classList.toggle('on', !!m.repeatStart); $('#b-re').classList.toggle('on', !!m.repeatEnd);
+  const mk = mKind(m);
+  $('#b-simile').classList.toggle('on', mk === 'one'); $('#b-rep2').classList.toggle('on', /^rep2/.test(mk)); $('#b-slash').classList.toggle('on', mk === 'slash');
+  $('#b-mrest').classList.toggle('on', mk === 'mrest'); $('#b-fillmark').classList.toggle('on', !!m.fillMark); $('#b-rs').classList.toggle('on', !!m.repeatStart); $('#b-re').classList.toggle('on', !!m.repeatEnd);
   $('#b-paste').disabled = !S.clip; $('#b-paste').style.opacity = S.clip ? '' : '.45';
   $('#undoBtn').disabled = !S.undo.length; $('#redoBtn').disabled = !S.redo.length;
 }
@@ -2753,6 +2969,7 @@ $('#libBtn').onclick = () => { pendingDelete = null; renderLibrary(); openSheet(
 $('#newScoreBtn').onclick = newScore;
 $('#newFromNote').onclick = newScore;
 $('#openExample').onclick = () => { loadScore(sampleScore(), true); $('#libSheet').hidden = true; };
+$('#openBigBand').onclick = () => { loadScore(bigBandScore(), true); $('#libSheet').hidden = true; };
 
 // Informações
 function openInfo() {
@@ -2764,6 +2981,7 @@ function openInfo() {
   $('#fKit').value = kitId();
   $('#fStick').value = s.sticking; $('#fPerLine').value = String(s.perLine); $('#fPaper').value = s.paper;
   $('#fMargin').value = String(s.pageMargin || 1.4);
+  $('#fClef').value = s.clef || 'perc'; $('#fBarCount').checked = s.countBars !== false;
   const st = s.staff || { type: 'kit', inst: 'snare' };
   if (!$('#fStaffInst').options.length) $('#fStaffInst').innerHTML = STAFF_INSTS.map(k => `<option value="${k}">${staffInstName(k)}</option>`).join('');
   $('#fStaff').value = st.type; $('#fStaffInst').value = st.inst; $('#fStaffInstRow').hidden = st.type === 'kit';
@@ -2791,6 +3009,7 @@ $('#infoSave').onclick = () => {
     s.tempo = $('#fTempoOn').checked ? bpm : 0;
     s.playBpm = bpm;
     s.playback = { metro: $('#fMetro').checked, countIn: $('#fCount').checked, loop: $('#fLoop').checked };
+    s.clef = $('#fClef').value; s.countBars = $('#fBarCount').checked;
     s.sticking = $('#fStick').value; s.perLine = parseInt($('#fPerLine').value, 10) || 0; s.paper = $('#fPaper').value; s.pageMargin = parseFloat($('#fMargin').value) || 1.4;
   });
   prefs.human = $('#fHuman').checked; prefs.room = $('#fRoom').checked; setKit($('#fKit').value); savePrefs();
@@ -2798,7 +3017,7 @@ $('#infoSave').onclick = () => {
   $('#infoSheet').hidden = true; render();
 };
 $('#legend').innerHTML = Object.keys(INST).map(k => {
-  const h = { n: '●', x: 'x', cx: '⊗', diam: '◆', tri: '▲', slash: '● cortada' }[INST[k].head];
+  const h = { n: '●', x: 'x', cx: '⊗', diam: '◆', tri: '▲', slash: '● cortada', rs: '⁄ (barra com haste)' }[INST[k].head];
   const pos = { 11: 'acima, 2ª suplementar', 10: '1ª linha suplementar', 9: 'acima da 5ª linha', 8: '5ª linha', 7: '4º espaço', 6: '4ª linha', 5: '3º espaço', 4: '3ª linha', 3: '2º espaço', 2: '2ª linha', 1: '1º espaço', '-1': 'abaixo da pauta', '-2': 'linha suplementar abaixo', 12: '2ª linha suplementar acima' }[INST[k].step];
   const extra = k === 'hiHatOpen' ? ' com “o”' : k === 'hiHatHalf' ? ' com “ø”' : '';
   return `<span>${INST[k].name}</span><span>${h}${extra} · ${pos}</span>`;
@@ -2831,7 +3050,9 @@ function openMeasure() {
   M.beats = m.time.beats; $('#mUnit').value = String(m.time.unit); $('#mSym').value = m.time.symbol;
   $('#mRepS').checked = m.repeatStart; $('#mRepE').checked = m.repeatEnd; $('#mFollow').checked = true;
   $('#mLabel').value = m.label || ''; $('#mTimes').value = String(m.repeatTimes || 2); $('#mVolta').value = String(m.volta || 0);
-  $('#mSimile').checked = !!m.simile; $('#mSimile').disabled = M.idx === 0;
+  $('#mVoltaTxt').value = m.voltaText || ''; $('#mVoltaTxtRow').hidden = !m.volta;
+  $('#mKind').value = mKind(m) === 'rep2b' ? 'rep2' : mKind(m); $('#mBars').value = String(barsOf(m) > 1 ? barsOf(m) : 4); $('#mBarsRow').hidden = mKind(m) !== 'mrest';
+  $('#mFill').checked = !!m.fillMark; $('#mNavS').value = m.navStart || ''; $('#mNavE').value = m.navEnd || '';
   $('#mTitle').textContent = 'Compasso ' + (M.idx + 1);
   syncMeasureUI(); openSheet('#measureSheet');
 }
@@ -2840,10 +3061,16 @@ $('#mSave').onclick = () => {
   if (!((sym === 'common' && M.beats === 4 && unit === 4) || (sym === 'cut' && M.beats === 2 && unit === 2))) sym = 'numeric';
   applyMeasure(M.idx, { beats: M.beats, unit, symbol: sym }, $('#mFollow').checked, {
     repeatStart: $('#mRepS').checked, repeatEnd: $('#mRepE').checked, label: $('#mLabel').value.trim(),
-    repeatTimes: +$('#mTimes').value, volta: +$('#mVolta').value, simile: $('#mSimile').checked
+    repeatTimes: +$('#mTimes').value, volta: +$('#mVolta').value, voltaText: +$('#mVolta').value ? $('#mVoltaTxt').value.trim() : '',
+    fillMark: $('#mFill').checked, navStart: $('#mNavS').value, navEnd: $('#mNavE').value
   });
+  const m = S.score.measures[M.idx], want = $('#mKind').value, bars = Math.max(2, parseInt($('#mBars').value, 10) || 4);
+  const have = mKind(m) === 'rep2b' ? 'rep2' : mKind(m);
+  if (want !== have || (want === 'mrest' && bars !== barsOf(m))) applyKind(M.idx, want, bars);
   $('#measureSheet').hidden = true;
 };
+$('#mKind').onchange = e => { $('#mBarsRow').hidden = e.target.value !== 'mrest'; };
+$('#mVolta').onchange = e => { $('#mVoltaTxtRow').hidden = e.target.value === '0'; };
 const closeM = fn => () => { fn(M.idx); $('#measureSheet').hidden = true; };
 $('#mInsert').onclick = closeM(insertMeasure);
 $('#mDup').onclick = closeM(duplicateMeasure);
@@ -3030,6 +3257,7 @@ function nameToInst(name) {
   if (!s) return null;
   if (INST[name]) return name;
   const has = (...w) => w.some(x => s.includes(x));
+  if (has('rhythm', 'slash', 'ritmo', 'barra', 'figure')) return 'rhythm';
   if (has('hat', 'chimbal', 'hh')) {
     if (has('pedal', 'foot', ' pé', 'pe)', 'pé')) return 'hiHatPedal';
     if (has('half', 'meio', '½')) return 'hiHatHalf';
@@ -3198,12 +3426,25 @@ function buildFromOnsets(spec) {
   const s = blankScore(library.length + 1);
   s.title = (spec.title || '').trim() || s.title;
   if (spec.tempo > 0) { s.tempo = Math.round(Math.max(20, Math.min(300, spec.tempo))); s.playBpm = s.tempo; }
+  if (spec.clef === 'bass') s.clef = 'bass';
   s.measures = measures.map(mm => {
-    const m = newMeasure(mm.time);
-    m.events = mm.events; m.repeatStart = !!mm.src.repeatStart; m.repeatEnd = !!mm.src.repeatEnd;
-    if (mm.src.repeatTimes > 2) m.repeatTimes = mm.src.repeatTimes;
+    const m = newMeasure(mm.time), src = mm.src;
+    m.events = mm.events; m.repeatStart = !!src.repeatStart; m.repeatEnd = !!src.repeatEnd;
+    if (src.repeatTimes > 2) m.repeatTimes = Math.min(8, src.repeatTimes);
+    if (src.label) m.label = String(src.label).slice(0, 24);
+    if (src.volta > 0) { m.volta = Math.max(1, Math.min(4, src.volta | 0)); if (src.voltaText) m.voltaText = String(src.voltaText).slice(0, 16); }
+    if (NAV_END[src.navEnd]) m.navEnd = src.navEnd;
+    if (src.navStart === 'segno' || src.navStart === 'coda') m.navStart = src.navStart;
+    if (src.fillMark) m.fillMark = true;
+    if (KIND_NAME[src.kind] && !m.events.some(e => !isRest(e))) {
+      m.simile = true; m.kind = src.kind; m.events = [];
+      if (src.kind === 'mrest') m.restBars = Math.max(2, Math.min(999, src.restBars | 0 || 2));
+    }
     return m;
   });
+  // repetição de 2 compassos: pares rep2 + rep2b
+  s.measures.forEach((m, i) => { if (mKind(m) === 'rep2' || mKind(m) === 'rep2b') { const p = s.measures[i - 1]; m.kind = p && mKind(p) === 'rep2' ? 'rep2b' : 'rep2'; if (i < 2) { m.simile = false; m.kind = ''; } } });
+  s.measures.forEach((m, i) => { if (mKind(m) === 'one' && i === 0) { m.simile = false; m.kind = ''; } });
   if (!s.measures.length) s.measures = [newMeasure({ beats: 4, unit: 4, symbol: 'numeric' })];
   report.measures = s.measures.length;
   report.notes = s.measures.reduce((a, m) => a + m.events.filter(e => !isRest(e)).length, 0);
@@ -3336,14 +3577,27 @@ function parseMusicXml(text) {
   const pitchedOnly = !drumParts.length;
   const DIA = { C: 0, D: 1, E: 2, F: 3, G: 4, A: 5, B: 6 }, E4 = 4 * 7 + 2;
   const measures = [], onsets = [];
-  let div = 1, time = { beats: 4, unit: 4, symbol: 'numeric' }, start = 0, tempo = 0, unknown = 0;
+  let div = 1, time = { beats: 4, unit: 4, symbol: 'numeric' }, start = 0, tempo = 0, unknown = 0, clef = '';
+  let restLeft = 0, repMode = 0, repIdx = 0, slashMode = false, ending = null;
+  const NAVW = [[/to\s*coda/i, 'toCoda'], [/d\.?\s*s\.?.*coda/i, 'dsCoda'], [/d\.?\s*s\.?.*fine/i, 'dsFine'], [/^d\.?\s*s\.?$/i, 'ds'], [/dal\s*segno/i, 'ds'],
+    [/d\.?\s*c\.?.*coda/i, 'dcCoda'], [/d\.?\s*c\.?.*fine/i, 'dcFine'], [/^d\.?\s*c\.?$/i, 'dc'], [/da\s*capo/i, 'dc'], [/^fine$/i, 'fine']];
   [...part.children].filter(c => c.nodeName === 'measure').forEach(meas => {
     let pos = 0, maxPos = 0, lastStart = 0, grace = 0, rs = false, re = false, times = 0;
-    const mOns = [];
+    const mOns = [], info = { kind: '', label: '', navStart: '', navEnd: '', fillMark: false, volta: 0, voltaText: '' };
+    let slashNotes = 0, skip = restLeft > 0;
+    if (restLeft > 0) restLeft--;
+    if (ending) { info.volta = ending.n; info.voltaText = ending.t; }
     [...meas.children].forEach(el => {
       const n = el.nodeName;
       if (n === 'attributes') {
         const dv = parseInt(txt(el, 'divisions'), 10); if (dv > 0) div = dv;
+        const cl = kid(el, 'clef'); if (cl && !clef) clef = txt(cl, 'sign') === 'F' ? 'bass' : 'perc';
+        const ms = kid(el, 'measure-style');
+        if (ms) {
+          const mr = kid(ms, 'multiple-rest'); if (mr && !skip) { const n = parseInt(mr.textContent, 10) || 0; if (n > 1) { info.kind = 'mrest'; info.restBars = n; restLeft = n - 1; } }
+          const rp = kid(ms, 'measure-repeat'); if (rp) { if (rp.getAttribute('type') === 'start') { repMode = parseInt(rp.textContent, 10) === 2 ? 2 : 1; repIdx = 0; } else repMode = 0; }
+          const sl = kid(ms, 'slash'); if (sl) slashMode = sl.getAttribute('type') === 'start';
+        }
         const tm = kid(el, 'time');
         if (tm) {
           const beats = txt(tm, 'beats').split('+').reduce((a, x) => a + (parseInt(x, 10) || 0), 0), unit = parseInt(txt(tm, 'beat-type'), 10);
@@ -3355,9 +3609,26 @@ function parseMusicXml(text) {
         const snd = n === 'sound' ? el : q(el, 'sound'); const tp = snd && parseFloat(snd.getAttribute('tempo'));
         if (tp > 0 && !tempo) tempo = tp;
         const pm = q(el, 'metronome > per-minute'); if (pm && !tempo && parseFloat(pm.textContent) > 0) tempo = parseFloat(pm.textContent);
+        if (n === 'direction') {
+          const rh = q(el, 'direction-type rehearsal'); if (rh && rh.textContent.trim()) info.label = rh.textContent.trim();
+          if (q(el, 'direction-type segno')) info.navStart = 'segno';
+          const words = [...el.querySelectorAll('direction-type words')].map(w => w.textContent.trim()).join(' ');
+          const nw = NAVW.find(([re]) => re.test(words));
+          if (nw) info.navEnd = nw[1];
+          else if (q(el, 'direction-type coda')) info.navStart = 'coda';
+          if (/\bfill\b/i.test(words)) info.fillMark = true;
+        }
       } else if (n === 'barline') {
         const r = kid(el, 'repeat');
         if (r) { if (r.getAttribute('direction') === 'forward') rs = true; else { re = true; times = parseInt(r.getAttribute('times'), 10) || 0; } }
+        const en = kid(el, 'ending');
+        if (en) {
+          const ty = en.getAttribute('type'), nums = (en.getAttribute('number') || '1').match(/\d+/g) || ['1'];
+          if (ty === 'start') { ending = { n: Math.min(4, +nums[0]), t: nums.length > 1 ? nums.join('.') + '.' : '' }; info.volta = ending.n; info.voltaText = ending.t; }
+          else ending = null;
+        }
+        if (q(el, 'segno')) info.navStart = 'segno';
+        if (q(el, 'coda')) info.navStart = info.navStart || 'coda';
       } else if (n === 'note') {
         if (kid(el, 'cue')) return;
         if (kid(el, 'grace')) { grace++; return; }
@@ -3371,6 +3642,8 @@ function parseMusicXml(text) {
         const ie = kid(el, 'instrument'), info = ie && instOf[ie.getAttribute('id')];
         if (info) inst = (info.gm != null && GM_DRUMS[info.gm]) || nameToInst(info.name);
         const head = txt(el, 'notehead');
+        if (head === 'slash' && (txt(el, 'stem') === 'none' || slashMode)) { slashNotes++; grace = 0; return; }
+        if (head === 'slash') inst = 'rhythm';
         const un = kid(el, 'unpitched');
         if (!inst && un) inst = stepToInst(DIA[txt(un, 'display-step')] + 7 * (parseInt(txt(un, 'display-octave'), 10) || 4) - E4, head);
         if (!inst && pitchedOnly) { const pp = kid(el, 'pitch'); inst = pp ? stepToInst(DIA[txt(pp, 'step')] + 7 * (parseInt(txt(pp, 'octave'), 10) || 4) - E4, head) : 'snare'; }
@@ -3395,25 +3668,35 @@ function parseMusicXml(text) {
     // anacruse: alinha as notas ao fim do compasso
     const filledW = maxPos / div / 4;
     const shift = meas.getAttribute('implicit') === 'yes' && filledW < cap - EPS && measures.length === 0 ? cap - filledW : 0;
+    if (skip) return;   // compassos já contados numa pausa de vários compassos
+    if (!info.kind && repMode) { info.kind = repMode === 2 ? 'rep2' : 'one'; repIdx++; }
+    if (!info.kind && !mOns.length && (slashMode || slashNotes)) info.kind = 'slash';
     mOns.forEach(o => { const t = o.at / div / 4 + shift; if (t < cap - EPS && t >= -EPS) onsets.push({ ...o, t: start + t, len: o.len / div / 4 }); });
-    measures.push({ time: { ...time }, repeatStart: rs, repeatEnd: re, repeatTimes: times });
+    measures.push({ time: { ...time }, repeatStart: rs, repeatEnd: re, repeatTimes: times, ...info });
     start += cap;
   });
   if (!measures.length) throw new Error('A partitura não tem compassos.');
-  return { title, tempo, measures, onsets, ignored: unknown };
+  return { title, tempo, measures, onsets, ignored: unknown, clef };
 }
 
 /* ---------- Foto ou print (o Claude lê a imagem) ---------- */
 const VISION_PROMPT = `You are transcribing a photo or screenshot of drum-set or percussion sheet music into data, so it can be edited in a drum notation app. Transcribe the rhythm exactly as written, every measure, in reading order (left to right, top to bottom).
 
 Reply with only a JSON object of this shape:
-{"title": "title printed on the page or \\"\\"", "tempo": 0, "time": "4/4",
- "measures": [ {"time": "4/4", "repeatStart": false, "repeatEnd": false, "voices": [ [EVENT, ...], [EVENT, ...] ] } ],
+{"title": "title printed on the page or \\"\\"", "tempo": 0, "time": "4/4", "clef": "percussion",
+ "measures": [ {"time": "4/4", "kind": "notes", "voices": [ [EVENT, ...], [EVENT, ...] ], "repeatStart": false, "repeatEnd": false, "times": 0,
+   "label": "", "volta": 0, "voltaText": "", "navStart": "", "navEnd": "", "fill": false, "bars": 0 } ],
  "doubts": "one short sentence in Brazilian Portuguese about anything unclear, or \\"\\""}
 
 - "time" on a measure is only needed when the time signature changes. "tempo" is the BPM if printed, else 0.
 - "voices": each voice is one rhythmic layer of the measure. Drum music often has two: stems up (hands) and stems down (feet). Use one voice when there is only one layer. The durations of each voice must add up to exactly the length of the measure (use rests).
-- A measure written with the repeat-measure sign (%) gets the same voices as the previous measure.
+- "clef": "bass" if the staff uses a bass (F) clef, as big band drum parts often do, else "percussion". Instrument positions are the same in both.
+- "kind": "notes" for written notes; "slash" for time slashes (one slash per beat, no stems: "keep time"); "repeat1" for the one-bar repeat sign (%); "repeat2" for EACH of the two measures under a two-bar repeat sign (the % with two slashes and a 2); "multirest" for a multi-measure rest, with "bars" = the number printed above it (it counts as ONE entry in "measures"). Measures that are not "notes" have empty "voices".
+- "label": the rehearsal mark (boxed letter or number such as "A", "B", "3") or a section name printed at the start of the measure. "volta": the ending number (1, 2, 3, 4) for measures under an ending bracket, and "voltaText" the exact bracket text if it lists several passes (e.g. "1.2.3."). "times": how many times to play when the repeat end says so (e.g. "play 3x" → 3).
+- "navStart": "segno" or "coda" when that sign is at the start of the measure. "navEnd": one of "toCoda", "dsCoda", "dsFine", "ds", "dcCoda", "dcFine", "dc", "fine" when printed at the end of the measure.
+- "fill": true when "Fill" (usually with a dashed line) is written over the measure.
+- Ensemble figures (small rhythms written above the staff while the staff shows time slashes or is empty): transcribe the figure rhythm as the measure's notes using the instrument "rhythm", with its accents. Rhythms written with slash noteheads and stems are also "rhythm".
+- A measure written with the repeat-measure sign (%) is "repeat1".
 
 EVENT: {"d": 8, "dots": 0, "tuplet": null, "rest": false, "notes": ["hiHat", "bass"], "ghost": [], "accent": "none", "ornament": "none", "sticking": ""}
 - "d": written value: 1 whole, 2 half, 4 quarter, 8 eighth, 16 sixteenth, 32 thirty-second, 64.
@@ -3432,6 +3715,7 @@ Instrument keys and where they usually sit on the 5-line drum staff (if the page
 - "crash": x on the 1st ledger line above; "splash" / "china": x higher up
 - "hiHatPedal": x below the staff (foot hi-hat); "cowbell": triangle in the 4th space; "cowbellFoot": triangle below the staff
 - "agogoHi" / "agogoLo": agogo bell high / low
+- "rhythm": slash noteheads with stems (rhythmic notation) and ensemble figures
 On a single-line percussion staff: notes on the line are "snare" unless the staff is labeled as another instrument (then use that instrument); for agogo, notes above the line are "agogoHi" and below are "agogoLo"; for a 2-line staff, upper = "agogoHi", lower = "agogoLo".
 
 If the image shows no rhythm notation at all, reply {"error": "short reason in Brazilian Portuguese"}.`;
@@ -3452,7 +3736,9 @@ function specFromVision(j) {
   ms.forEach(m => {
     time = parseTimeStr(m && m.time, time);
     const cap = time.beats / time.unit;
-    let voices = Array.isArray(m && m.voices) ? m.voices : Array.isArray(m && m.events) ? [m.events] : [];
+    const KMAP = { slash: 'slash', repeat1: 'one', repeat: 'one', '%': 'one', repeat2: 'rep2', multirest: 'mrest', mrest: 'mrest' };
+    const kind = KMAP[m && m.kind] || '';
+    let voices = kind ? [] : Array.isArray(m && m.voices) ? m.voices : Array.isArray(m && m.events) ? [m.events] : [];
     voices.forEach(v => {
       if (!Array.isArray(v)) return;
       let t = 0;
@@ -3475,10 +3761,12 @@ function specFromVision(j) {
         t += w;
       });
     });
-    measures.push({ time: { ...time }, repeatStart: !!(m && m.repeatStart), repeatEnd: !!(m && m.repeatEnd) });
+    measures.push({ time: { ...time }, repeatStart: !!(m && m.repeatStart), repeatEnd: !!(m && m.repeatEnd), repeatTimes: +(m && m.times) || 0,
+      kind, restBars: +(m && m.bars) || 0, label: m && typeof m.label === 'string' ? m.label : '', volta: +(m && m.volta) || 0, voltaText: m && typeof m.voltaText === 'string' ? m.voltaText : '',
+      navStart: m && m.navStart, navEnd: m && m.navEnd, fillMark: !!(m && m.fill) });
     start += cap;
   });
-  return { title: typeof j.title === 'string' ? j.title : '', tempo: +j.tempo || 0, measures, onsets, ignored: dropped, doubts: typeof j.doubts === 'string' ? j.doubts : '' };
+  return { clef: /bass|f/i.test(String(j.clef || '')) ? 'bass' : 'perc', title: typeof j.title === 'string' ? j.title : '', tempo: +j.tempo || 0, measures, onsets, ignored: dropped, doubts: typeof j.doubts === 'string' ? j.doubts : '' };
 }
 async function getSampler() { return null; }  // leitura de imagem só existe dentro do Claude
 const imageReaderP = (async () => { const s = await getSampler(); if (!s) return null; const lim = await s.limits().catch(() => null); return lim && lim.images ? { s, lim: lim.images } : null; })();
