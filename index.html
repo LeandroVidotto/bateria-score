@@ -452,7 +452,7 @@ button { cursor: pointer; -webkit-tap-highlight-color: transparent; touch-action
       <div class="field"><label for="fPaper">Papel</label><select id="fPaper"><option value="a4">A4</option><option value="letter">Carta (Letter)</option></select></div>
     </div>
     <div class="group"><h3>Legenda dos instrumentos</h3><div class="legend" id="legend"></div></div>
-    <p class="hint">Sons de bateria: Estúdio — SM Drums “Deeply Sampled Free Drums” (Scott McLean, Tod Stillwell, Suleiman Ali), domínio público. Jazz, agogô e cowbell — Virtuosity Drums, Versilian Studios, CC0. Rock — AVL Drumkits “Black Pearl”, de Glen MacArthur (bandshed.net), CC BY-SA 3.0. MP3 codificado com LAME (lamejs, licença LGPL).</p>
+    <p class="hint">Sons de bateria: Rock produzido — Naked Drums, de Wilkinson Audio (versão SFZ por kinwie), CC BY 4.0, mixado e processado para este app. Estúdio — SM Drums “Deeply Sampled Free Drums” (Scott McLean, Tod Stillwell, Suleiman Ali), domínio público. Jazz, agogô e cowbell — Virtuosity Drums, Versilian Studios, CC0. Rock — AVL Drumkits “Black Pearl”, de Glen MacArthur (bandshed.net), CC BY-SA 3.0. MP3 codificado com LAME (lamejs, licença LGPL).</p>
   </div></div>
 </div>
 
@@ -1646,6 +1646,7 @@ const HATS = ['hiHat', 'hiHatPedal', 'hiHatHalf', 'hiHatOpen'];
 // Timbres disponíveis. 'pearl' é o kit anterior (mono, kit-samples.js); os outros são pacotes estéreo
 // (um .json com o mapa e um .mp3 com todas as amostras em sequência).
 const KITS = {
+  rock: { label: 'Rock produzido — Yamaha, som de estúdio mixado', json: 'kit-rock.json' },
   estudio: { label: 'Estúdio — Ludwig vintage', json: 'kit-estudio.json' },
   jazz: { label: 'Jazz — kit de jazz (Versilian)', json: 'kit-jazz.json' },
   pearl: { label: 'Rock — Pearl (som anterior)', legacy: true }

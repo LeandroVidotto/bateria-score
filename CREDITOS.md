@@ -1,5 +1,10 @@
 # Créditos
 
+**Timbre "Rock produzido"** — Naked Drums, de Wilkinson Audio (Yamaha Recording Custom, versão SFZ por kinwie),
+licença Creative Commons Atribuição 4.0 (CC BY 4.0): https://creativecommons.org/licenses/by/4.0/
+Amostras: https://github.com/sfzinstruments/WilkinsonAudio.NakedDrums — para este app, os microfones de pele, overhead e
+salas de cada toque foram mixados, equalizados e comprimidos (som de estúdio "pronto para mix"), recortados e convertidos para MP3.
+
 **Timbre "Estúdio"** — SM Drums "Deeply Sampled Free Drums" (Scott McLean, Tod Stillwell, Suleiman Ali), domínio público.
 Amostras: https://github.com/sfzinstruments/SMDrums
 
